@@ -21,6 +21,16 @@ ARCHETYPE_PARAM_TEMPLATES = {
         "bb_period": (14, 35),
         "bb_mult": (1.6, 2.6),
     },
+    "scherman_volatility_divergence": {
+        "bb_period": (16, 26),
+        "bb_mult": (1.8, 2.4),
+    },
+    "seibert_zeno_price_action": {
+        "period": (14, 25),
+    },
+    "mccormick_td_exhaustion": {
+        "lookback": (4, 6),
+    },
     "macd_momentum": {
         "macd_fast": (8, 16),
         "macd_slow": (20, 34),

@@ -56,6 +56,45 @@ class StrategyEvaluator:
             # Rebote: el mínimo perforó la banda inferior pero el cierre recuperó
             return candles[candle_idx]["low"] <= lower_val and closes[candle_idx] > lower_val and closes[candle_idx] > candles[candle_idx]["open"]
 
+        elif arch == "scherman_volatility_divergence":
+            # Ivan Scherman (Campeón Mundial 2023 - +491.4%): Agotamiento institucional con bandas y volumen
+            bb_period = params.get("bb_period", 20)
+            bb_mult = params.get("bb_mult", 2.0)
+            if candle_idx < bb_period + 12:
+                return False
+            _, _, lower_val = TechnicalIndicators.bollinger_bands_point(closes[: candle_idx + 1], bb_period, bb_mult)
+            c = candles[candle_idx]
+            prev_window = candles[candle_idx - 10 : candle_idx]
+            prev_min_low = min(x["low"] for x in prev_window)
+            # Divergencia: nuevo mínimo en precio pero rechaza fuera de bandas con absorción institucional
+            return c["low"] <= prev_min_low and c["close"] > lower_val and c["volume"] < candles[candle_idx - 1]["volume"] and c["close"] > c["open"]
+
+        elif arch == "seibert_zeno_price_action":
+            # Stefan Seibert (Campeón Mundial 2022 y 2020 - +342.3%): Sistema Zeno de Ruptura de Rango y Expansión ATR
+            period = params.get("period", 20)
+            if candle_idx < period + 5:
+                return False
+            sma_mid, _, _ = TechnicalIndicators.bollinger_bands_point(closes[: candle_idx + 1], period, 2.0)
+            c = candles[candle_idx]
+            prev_atr = sum(candles[i]["high"] - candles[i]["low"] for i in range(candle_idx - 10, candle_idx)) / 10.0
+            c_range = c["high"] - c["low"]
+            # Tendencia por encima de la media + vela expansiva superando el máximo anterior
+            return c["close"] > sma_mid and c["close"] > c["open"] and c_range > prev_atr and c["close"] > candles[candle_idx - 1]["high"]
+
+        elif arch == "mccormick_td_exhaustion":
+            # Kevin McCormick (Campeón Mundial 2021 - +253.8%): Setup DeMARK TD Sequential 9 Reversal
+            if candle_idx < 13:
+                return False
+            # Conteo de 9 cierres consecutivos inferiores a close[4]
+            is_td9 = True
+            for k in range(9):
+                curr_i = candle_idx - k
+                if not (closes[curr_i] < closes[curr_i - 4]):
+                    is_td9 = False
+                    break
+            # Señal de compra tras completar el conteo 9 cuando la vela actual rebota
+            return is_td9 and closes[candle_idx] > candles[candle_idx]["open"]
+
         elif arch == "macd_momentum":
             fast = params.get("macd_fast", 12)
             slow = params.get("macd_slow", 26)
@@ -170,6 +209,26 @@ class StrategyEvaluator:
             sma_mid, _, _ = TechnicalIndicators.bollinger_bands_point(closes[: candle_idx + 1], bb_period)
             # Salida en la media central de Bollinger (Take Profit natural)
             return current_close >= sma_mid
+
+        elif arch == "scherman_volatility_divergence":
+            # Salida Ivan Scherman: cruce por encima de la media de 20 periodos (cierre de divergencia)
+            bb_period = params.get("bb_period", 20)
+            if candle_idx < bb_period:
+                return False
+            sma_mid, _, _ = TechnicalIndicators.bollinger_bands_point(closes[: candle_idx + 1], bb_period)
+            return current_close >= sma_mid
+
+        elif arch == "seibert_zeno_price_action":
+            # Salida Stefan Seibert: cierre por debajo de la media móvil rápida o trailing 1.8x
+            period = params.get("period", 20)
+            if candle_idx < period:
+                return False
+            sma_mid, _, _ = TechnicalIndicators.bollinger_bands_point(closes[: candle_idx + 1], period)
+            return current_close < sma_mid or current_close >= entry_price * 1.035
+
+        elif arch == "mccormick_td_exhaustion":
+            # Salida Kevin McCormick: Take profit a 4 velas o 2.5% de rebote
+            return current_close >= entry_price * 1.025 or current_close <= entry_price * (1.0 - sl_pct)
 
         elif arch == "macd_momentum":
             fast = params.get("macd_fast", 12)

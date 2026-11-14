@@ -148,12 +148,14 @@ with tab_leaderboard:
             "MACD": "Gerald Appel (1979 - Momentum Clásico)",
             "RSI": "J. Welles Wilder (1978 - RSI Pullback)",
             "BOLL": "John Bollinger (1983 - Mean Reversion)",
-            "UNGER": "Andrea Unger (4x Campeón Mundial - Session Breakout)",
-            "HOFFMAN": "Rob Hoffman (2015 - Inventory Retracement Bar)",
+            "SCHERMAN": "Ivan Scherman (Campeón Mundial 2023 - Agotamiento Volatilidad)",
+            "SEIBERT": "Stefan Seibert (Campeón Mundial 2022/2020 - Zeno Price Action)",
+            "MCCORMICK": "Kevin McCormick (Campeón Mundial 2021 - DeMARK TD9 Reversal)",
+            "HOFFMAN": "Rob Hoffman (Campeón 2015 - Inventory Retracement Bar)",
             "HUGHES": "Chuck Hughes (10x Campeón Mundial - Keltner Trend)",
-            "WILLIAMS": "Larry & Michelle Williams (Récord Histórico 11,376% - Williams %R)",
+            "UNGER": "Andrea Unger (4x Campeón Mundial - Session Breakout)",
             "DAVEY": "Kevin Davey (Campeón Mundial 2006 - Algo Volatility)",
-            "DENNIS": "Richard Dennis (Turtle System 2)",
+            "WILLIAMS": "Larry & Michelle Williams (Récord Histórico 11,376% - Williams %R)",
         }
 
         for r in roots:
