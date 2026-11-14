@@ -86,6 +86,17 @@ class TechnicalIndicators:
         return sma_vals, upper, lower
 
     @staticmethod
+    def bollinger_bands_point(closes: List[float], period: int = 20, mult: float = 2.0) -> Tuple[float, float, float]:
+        """Calcula de forma O(period) únicamente el último punto de Bollinger sin vectorizar el histórico completo."""
+        if len(closes) < period:
+            return float("nan"), float("nan"), float("nan")
+        window = closes[-period:]
+        mean = sum(window) / period
+        variance = sum((x - mean) ** 2 for x in window) / period
+        std_dev = math.sqrt(variance)
+        return mean, mean + (mult * std_dev), mean - (mult * std_dev)
+
+    @staticmethod
     def macd(closes: List[float], fast: int = 12, slow: int = 26, signal: int = 9) -> Tuple[List[float], List[float], List[float]]:
         ema_fast = TechnicalIndicators.ema(closes, fast)
         ema_slow = TechnicalIndicators.ema(closes, slow)

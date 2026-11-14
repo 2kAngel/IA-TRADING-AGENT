@@ -32,23 +32,18 @@ class StrategyEvaluator:
             return closes[candle_idx] > entry_high
 
         elif arch == "trend_pullback_rsi":
-            ema_period = params.get("ema_trend", 50)
             rsi_period = params.get("rsi_period", 14)
-            rsi_oversold = params.get("rsi_oversold", 30)
+            rsi_oversold = params.get("rsi_oversold", 35)
 
-            if candle_idx < max(ema_period, rsi_period) + 2:
+            if candle_idx < rsi_period + 2:
                 return False
 
-            ema_vals = TechnicalIndicators.ema(closes[: candle_idx + 1], ema_period)
             rsi_vals = TechnicalIndicators.rsi(closes[: candle_idx + 1], rsi_period)
-
-            current_close = closes[candle_idx]
-            current_ema = ema_vals[-1]
             current_rsi = rsi_vals[-1]
             prev_rsi = rsi_vals[-2]
 
-            # Tendencia alcista (precio > EMA) + Salida de sobreventa RSI cruzando hacia arriba
-            return (current_close > current_ema) and (prev_rsi <= rsi_oversold) and (current_rsi > rsi_oversold)
+            # Salida o rebote desde sobreventa RSI cruzando hacia arriba
+            return (prev_rsi <= rsi_oversold) and (current_rsi > rsi_oversold)
 
         elif arch == "bollinger_mean_reversion":
             bb_period = params.get("bb_period", 20)
@@ -57,9 +52,9 @@ class StrategyEvaluator:
             if candle_idx < bb_period + 1:
                 return False
 
-            _, _, lower = TechnicalIndicators.bollinger_bands(closes[: candle_idx + 1], bb_period, bb_mult)
+            _, _, lower_val = TechnicalIndicators.bollinger_bands_point(closes[: candle_idx + 1], bb_period, bb_mult)
             # Rebote: el mínimo perforó la banda inferior pero el cierre recuperó
-            return candles[candle_idx]["low"] <= lower[-1] and closes[candle_idx] > lower[-1] and closes[candle_idx] > candles[candle_idx]["open"]
+            return candles[candle_idx]["low"] <= lower_val and closes[candle_idx] > lower_val and closes[candle_idx] > candles[candle_idx]["open"]
 
         elif arch == "macd_momentum":
             fast = params.get("macd_fast", 12)
@@ -115,9 +110,9 @@ class StrategyEvaluator:
             bb_period = params.get("bb_period", 20)
             if candle_idx < bb_period:
                 return False
-            sma_mid, _, _ = TechnicalIndicators.bollinger_bands(closes[: candle_idx + 1], bb_period)
+            sma_mid, _, _ = TechnicalIndicators.bollinger_bands_point(closes[: candle_idx + 1], bb_period)
             # Salida en la media central de Bollinger (Take Profit natural)
-            return current_close >= sma_mid[-1]
+            return current_close >= sma_mid
 
         elif arch == "macd_momentum":
             fast = params.get("macd_fast", 12)
