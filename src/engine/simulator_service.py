@@ -185,8 +185,8 @@ def execute_custom_simulation(num_candles: int = 800, capital_inicial: float = 8
     db.clear_all_data()
 
     engine = EvolutionEngine(
-        reproduction_threshold=40.0,
-        reproduction_cost=20.0,
+        reproduction_threshold=28.0,
+        reproduction_cost=14.0,
         mutation_rate=0.45,
         speciation_rate=0.20,
     )
@@ -251,8 +251,8 @@ def execute_custom_simulation(num_candles: int = 800, capital_inicial: float = 8
             for e in bot.portfolio.ledger[-2:]:
                 runner.db.save_ledger_entry(e)
 
-        # Si al liquidar su patrimonio queda por debajo del mínimo operativo (2.0 €), registrar defunción
-        if bot.portfolio.cash_balance < 2.0:
+        # Si al liquidar su patrimonio queda por debajo del mínimo operativo (<= 4.5 €), registrar defunción
+        if bot.portfolio.cash_balance <= 4.5:
             bot.status = BotStatus.DEAD
             bot.death_at = str(last_candle["timestamp"])
             if bot in runner.active_bots:

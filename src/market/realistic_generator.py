@@ -15,42 +15,39 @@ def generate_realistic_btc_market_cycles(count: int = 1000, start_price: float =
     candles = []
     price = start_price
 
-    # Parámetros de regímenes cíclicos de Bitcoin
-    regimes = ["BULL_TREND", "CHOPPY_RANGE", "PULLBACK", "ACCUMULATION"]
-    current_regime = "ACCUMULATION"
-    regime_duration = 80
+    # Parámetros de regímenes cíclicos de Bitcoin con selección natural real:
+    # 1. BULL_RUN: Tendencia alcista donde las mejores estrategias ganan capital y procrean (alcanzando 40 €).
+    # 2. CHOPPY_RANGE: Rango lateral engañoso con falsas rupturas y fricción de comisiones.
+    # 3. BEAR_SELLOFF: Corrección prolongada que castiga a estrategias sin disciplina y lleva a la quiebra técnica (muerte).
+    regimes = ["BULL_RUN", "CHOPPY_RANGE", "BEAR_SELLOFF", "CHOPPY_RANGE", "BULL_RUN", "BEAR_SELLOFF"]
+    current_regime = "CHOPPY_RANGE"
+    regime_duration = 75
     regime_counter = 0
 
     for i in range(count):
         regime_counter += 1
         if regime_counter >= regime_duration:
             current_regime = random.choice(regimes)
-            regime_duration = random.randint(60, 140)
+            regime_duration = random.randint(55, 115)
             regime_counter = 0
 
-        # Dinámica por régimen con oscilaciones reales
-        if current_regime == "BULL_TREND":
-            drift = 0.0022 + random.gauss(0.0, 0.008)
-            volatility = 0.012
+        # Dinámica por régimen calibrada para estrés y rendimiento financiero real
+        if current_regime == "BULL_RUN":
+            drift = 0.0034 + random.gauss(0.0, 0.009)
+            volatility = 0.013
         elif current_regime == "CHOPPY_RANGE":
-            # Rango oscilante con trampas de mercado y falsas rupturas
-            drift = -0.0003 + random.gauss(0.0, 0.011)
-            volatility = 0.018
-        elif current_regime == "PULLBACK":
-            # Fase correctiva / toma de beneficios
-            drift = -0.0016 + random.gauss(0.0, 0.009)
-            volatility = 0.015
-        elif current_regime == "ACCUMULATION":
-            # Consolidación antes de nuevos impulsos
-            drift = 0.0007 + random.gauss(0.0, 0.007)
-            volatility = 0.010
+            drift = -0.0006 + random.gauss(0.0, 0.013)
+            volatility = 0.022
+        elif current_regime == "BEAR_SELLOFF":
+            drift = -0.0028 + random.gauss(0.0, 0.012)
+            volatility = 0.019
 
-        # Ocasional sacudida rápida (-2% a -4%) para probar el rigor de los stop losses
-        if random.random() < 0.012:
-            drift -= random.uniform(0.02, 0.035)
+        # Sacudidas repentinas (barridos institucionales de stops)
+        if random.random() < 0.015:
+            drift -= random.uniform(0.025, 0.045)
 
         open_p = price
-        close_p = max(25000.0, open_p * (1.0 + drift))
+        close_p = max(18000.0, open_p * (1.0 + drift))
 
         # Mechas realistas (barridos de stops institucionales)
         high_p = max(open_p, close_p) * (1.0 + abs(random.gauss(0.004, volatility * 0.5)))
