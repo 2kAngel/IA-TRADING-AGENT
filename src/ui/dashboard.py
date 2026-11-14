@@ -27,7 +27,18 @@ stats_engine = StatisticsEngine(db_path=DB_PATH)
 # BARRA LATERAL: CONTROL DE SIMULACIÓN Y VELAS
 # ==========================================
 st.sidebar.header("⚙️ Control de Simulación")
-st.sidebar.markdown("Selecciona el tamaño del histórico para someter a los bots a pruebas de corto, medio o largo plazo:")
+
+capital_input = st.sidebar.number_input(
+    "Capital Inicial Total (€)",
+    min_value=20,
+    max_value=1000,
+    value=80,
+    step=20,
+    help="Cada 20 € se engendra 1 bot semilla Génesis independiente (ej. 20€ = 1 semilla, 80€ = 4 semillas, 100€ = 5 semillas).",
+)
+
+semillas_calculadas = max(1, int(capital_input // 20))
+st.sidebar.caption(f"🌱 Población Inicial: **{semillas_calculadas} bot(s) semilla** (20 € c/u).")
 
 num_velas_input = st.sidebar.slider(
     "Número de Velas (Horas)",
@@ -42,8 +53,8 @@ dias_aprox = round(num_velas_input / 24.0, 1)
 st.sidebar.caption(f"📅 Equivalente aproximado: **{dias_aprox} días** de mercado (velas 1H).")
 
 if st.sidebar.button("🚀 Ejecutar Nueva Simulación", type="primary", use_container_width=True):
-    with st.spinner(f"Simulando competencia evolutiva a lo largo de {num_velas_input} velas..."):
-        res = execute_custom_simulation(num_candles=num_velas_input)
+    with st.spinner(f"Simulando {semillas_calculadas} semillas ({capital_input} €) a lo largo de {num_velas_input} velas..."):
+        res = execute_custom_simulation(num_candles=num_velas_input, capital_inicial=float(capital_input))
         st.sidebar.success(f"¡Completado! {res['total_active']} bots vivos ({res['total_equity']:.2f} €).")
         st.rerun()
 
