@@ -18,10 +18,9 @@ def execute_custom_simulation(num_candles: int = 800, capital_inicial: float = 8
     - num_candles: Número de velas de mercado.
     """
     db_path = os.path.join("data", "evolution.db")
-    if os.path.exists(db_path):
-        os.remove(db_path)
-
     db = DatabaseManager(db_path=db_path)
+    db.clear_all_data()
+
     engine = EvolutionEngine(
         reproduction_threshold=40.0,
         reproduction_cost=20.0,

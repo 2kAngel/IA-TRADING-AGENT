@@ -20,6 +20,14 @@ class DatabaseManager:
         self.conn.execute("PRAGMA journal_mode = WAL;")
         self._init_schema()
 
+    def clear_all_data(self):
+        """Limpia todas las tablas de forma transaccional sin necesidad de borrar el archivo de disco."""
+        with self.conn:
+            self.conn.execute("DELETE FROM reproductions;")
+            self.conn.execute("DELETE FROM trades;")
+            self.conn.execute("DELETE FROM ledger_entries;")
+            self.conn.execute("DELETE FROM bots;")
+
     def _init_schema(self):
         with self.conn:
             self.conn.executescript("""
