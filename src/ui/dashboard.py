@@ -17,10 +17,38 @@ st.set_page_config(
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from src.engine.statistics_engine import StatisticsEngine
 from src.engine.pine_exporter import PineScriptExporter
+from src.engine.simulator_service import execute_custom_simulation
 from src.core.models import StrategyGenome
 
 DB_PATH = os.path.join("data", "evolution.db")
 stats_engine = StatisticsEngine(db_path=DB_PATH)
+
+# ==========================================
+# BARRA LATERAL: CONTROL DE SIMULACIÓN Y VELAS
+# ==========================================
+st.sidebar.header("⚙️ Control de Simulación")
+st.sidebar.markdown("Selecciona el tamaño del histórico para someter a los bots a pruebas de corto, medio o largo plazo:")
+
+num_velas_input = st.sidebar.slider(
+    "Número de Velas (Horas)",
+    minval=100,
+    maxval=3000,
+    value=800,
+    step=100,
+    help="100 velas ≈ 4 días | 720 velas ≈ 1 mes | 2.160 velas ≈ 3 meses",
+)
+
+dias_aprox = round(num_velas_input / 24.0, 1)
+st.sidebar.caption(f"📅 Equivalente aproximado: **{dias_aprox} días** de mercado (velas 1H).")
+
+if st.sidebar.button("🚀 Ejecutar Nueva Simulación", type="primary", use_container_width=True):
+    with st.spinner(f"Simulando competencia evolutiva a lo largo de {num_velas_input} velas..."):
+        res = execute_custom_simulation(num_candles=num_velas_input)
+        st.sidebar.success(f"¡Completado! {res['total_active']} bots vivos ({res['total_equity']:.2f} €).")
+        st.rerun()
+
+st.sidebar.markdown("---")
+st.sidebar.info("💡 **Tip:** Con más de 1.000 velas verás nacer nietos (Gen 2) y bisnietos (Gen 3), y los bots de RSI y Bollinger empezarán a operar.")
 
 st.title("🧬 Bitcoin Evolution Trading System")
 st.caption("Laboratorio Cuantitativo de Selección Natural, Herencia Genética y Supervivencia para Bitcoin")
