@@ -97,6 +97,48 @@ class TechnicalIndicators:
         return mean, mean + (mult * std_dev), mean - (mult * std_dev)
 
     @staticmethod
+    def williams_r(highs: List[float], lows: List[float], closes: List[float], period: int = 14) -> List[float]:
+        """Calcula Williams %R (-100 a 0) de Larry Williams."""
+        if len(closes) < period:
+            return [float("nan")] * len(closes)
+        res = [float("nan")] * (period - 1)
+        for i in range(period - 1, len(closes)):
+            h_max = max(highs[i - period + 1 : i + 1])
+            l_min = min(lows[i - period + 1 : i + 1])
+            if h_max == l_min:
+                res.append(-50.0)
+            else:
+                wr = ((h_max - closes[i]) / (h_max - l_min)) * -100.0
+                res.append(wr)
+        return res
+
+    @staticmethod
+    def keltner_channels_point(
+        candles: List[Dict[str, Any]],
+        closes: List[float],
+        ema_period: int = 20,
+        mult: float = 1.5,
+        atr_period: int = 10,
+    ) -> Tuple[float, float, float]:
+        """Calcula el canal de Keltner (Chuck Hughes) en el punto actual."""
+        if len(closes) < max(ema_period, atr_period):
+            return float("nan"), float("nan"), float("nan")
+        multiplier = 2.0 / (ema_period + 1)
+        ema = sum(closes[:ema_period]) / ema_period
+        for c in closes[ema_period:]:
+            ema = (c - ema) * multiplier + ema
+
+        tr_sum = 0.0
+        n_candles = len(candles)
+        for i in range(n_candles - atr_period, n_candles):
+            h = candles[i]["high"]
+            l = candles[i]["low"]
+            pc = candles[i - 1]["close"] if i > 0 else (h + l) / 2.0
+            tr_sum += max(h - l, abs(h - pc), abs(l - pc))
+        atr = tr_sum / atr_period
+        return ema, ema + (mult * atr), ema - (mult * atr)
+
+    @staticmethod
     def macd(closes: List[float], fast: int = 12, slow: int = 26, signal: int = 9) -> Tuple[List[float], List[float], List[float]]:
         ema_fast = TechnicalIndicators.ema(closes, fast)
         ema_slow = TechnicalIndicators.ema(closes, slow)

@@ -71,6 +71,63 @@ class StrategyEvaluator:
             # Cruce alcista de MACD sobre la línea de señal
             return macd_line[-2] <= sig_line[-2] and macd_line[-1] > sig_line[-1]
 
+        elif arch == "unger_session_breakout":
+            # Andrea Unger (Campeón 2008-2010, 2012): Ruptura de rango previo con filtro de volatilidad
+            lookback = params.get("lookback", 12)
+            if candle_idx < lookback + 1:
+                return False
+            window = candles[candle_idx - lookback : candle_idx]
+            ref_high = max(c["high"] for c in window)
+            current_close = closes[candle_idx]
+            # Filtro de expansión: el rango del cuerpo actual debe ser positivo y superar el techo
+            return current_close > ref_high and current_close > candles[candle_idx]["open"]
+
+        elif arch == "williams_r_momentum":
+            # Larry Williams (1987) / Michelle Williams (1997): Rebote desde zona extrema Williams %R (< -80 saliendo arriba)
+            wr_period = params.get("wr_period", 14)
+            wr_oversold = params.get("wr_oversold", -80.0)
+            if candle_idx < wr_period + 2:
+                return False
+            highs = [c["high"] for c in candles[: candle_idx + 1]]
+            lows = [c["low"] for c in candles[: candle_idx + 1]]
+            wr_vals = TechnicalIndicators.williams_r(highs, lows, closes[: candle_idx + 1], wr_period)
+            if math.isnan(wr_vals[-1]) or math.isnan(wr_vals[-2]):
+                return False
+            return wr_vals[-2] <= wr_oversold and wr_vals[-1] > wr_oversold
+
+        elif arch == "hughes_keltner_trend":
+            # Chuck Hughes (Campeón multi-año, ej. 2015, 1999): Reversión en Keltner Channel a favor de tendencia
+            k_period = params.get("k_period", 20)
+            k_mult = params.get("k_mult", 1.5)
+            if candle_idx < k_period + 2:
+                return False
+            mid_k, _, lower_k = TechnicalIndicators.keltner_channels_point(
+                candles[: candle_idx + 1], closes[: candle_idx + 1], ema_period=k_period, mult=k_mult
+            )
+            current_c = closes[candle_idx]
+            current_low = candles[candle_idx]["low"]
+            # Rebote en banda inferior de Keltner dentro de tendencia
+            return current_low <= lower_k and current_c > lower_k and current_c > candles[candle_idx]["open"]
+
+        elif arch == "hoffman_irb_bounce":
+            # Rob Hoffman (Campeón Internacional): Inventory Retracement Bar
+            # Vela de rechazo bajista: mecha pronunciada en pullback y cierre recuperando en tercio superior
+            ema_p = params.get("ema_trend", 20)
+            if candle_idx < ema_p + 2:
+                return False
+            c_candle = candles[candle_idx]
+            c_open = c_candle["open"]
+            c_close = c_candle["close"]
+            c_high = c_candle["high"]
+            c_low = c_candle["low"]
+            c_range = c_high - c_low
+            if c_range <= 0:
+                return False
+            # Mecha inferior de al menos 40% del rango total (rechazo de venta institucional)
+            lower_wick = min(c_open, c_close) - c_low
+            wick_ratio = lower_wick / c_range
+            return wick_ratio >= 0.40 and c_close > c_open
+
         return False
 
     @staticmethod
@@ -123,5 +180,39 @@ class StrategyEvaluator:
             macd_line, sig_line, _ = TechnicalIndicators.macd(closes[: candle_idx + 1], fast, slow, signal)
             # Cruce bajista
             return macd_line[-1] < sig_line[-1]
+
+        elif arch == "unger_session_breakout":
+            # Salida de Andrea Unger: cierre por debajo del mínimo de la ventana o tras N velas
+            exit_p = params.get("exit_lookback", 6)
+            if candle_idx < exit_p:
+                return False
+            ref_low = min(c["low"] for c in candles[candle_idx - exit_p : candle_idx])
+            return current_close < ref_low
+
+        elif arch == "williams_r_momentum":
+            # Salida Larry Williams: %R entra en sobrecompra (> -20) y cruza hacia abajo
+            wr_period = params.get("wr_period", 14)
+            if candle_idx < wr_period:
+                return False
+            highs = [c["high"] for c in candles[: candle_idx + 1]]
+            lows = [c["low"] for c in candles[: candle_idx + 1]]
+            wr_vals = TechnicalIndicators.williams_r(highs, lows, closes[: candle_idx + 1], wr_period)
+            return wr_vals[-1] >= -20.0
+
+        elif arch == "hughes_keltner_trend":
+            # Salida Chuck Hughes: precio alcanza o supera la banda superior de Keltner
+            k_period = params.get("k_period", 20)
+            k_mult = params.get("k_mult", 1.5)
+            if candle_idx < k_period:
+                return False
+            _, upper_k, _ = TechnicalIndicators.keltner_channels_point(
+                candles[: candle_idx + 1], closes[: candle_idx + 1], ema_period=k_period, mult=k_mult
+            )
+            return current_close >= upper_k
+
+        elif arch == "hoffman_irb_bounce":
+            # Salida Rob Hoffman: objetivo 1.8x de riesgo o cierre bajo mínimo previo
+            target_tp = entry_price * (1.0 + (sl_pct * 1.8))
+            return current_close >= target_tp
 
         return False

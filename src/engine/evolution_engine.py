@@ -26,6 +26,21 @@ ARCHETYPE_PARAM_TEMPLATES = {
         "macd_slow": (20, 34),
         "macd_signal": (7, 12),
     },
+    "unger_session_breakout": {
+        "lookback": (6, 24),
+        "exit_lookback": (3, 12),
+    },
+    "williams_r_momentum": {
+        "wr_period": (10, 21),
+        "wr_oversold": (-85.0, -75.0),
+    },
+    "hughes_keltner_trend": {
+        "k_period": (14, 30),
+        "k_mult": (1.2, 2.2),
+    },
+    "hoffman_irb_bounce": {
+        "ema_trend": (14, 30),
+    },
 }
 
 

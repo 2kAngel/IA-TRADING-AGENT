@@ -124,6 +124,79 @@ plot(midBB, "BB Mid", color=color.gray, style=plot.style_dotted)
 plot(lowerBB, "BB Lower", color=color.green)
 """
 
+        elif arch == "unger_session_breakout":
+            lookback = params.get("lookback", 12)
+            exit_p = params.get("exit_lookback", 6)
+            body = f"""
+// ==========================================
+// 3. INDICADORES: ANDREA UNGER SESSION BREAKOUT
+// ==========================================
+lookbackVal = input.int({lookback}, "Lookback Entrada", group="Parametros")
+exitVal     = input.int({exit_p}, "Lookback Salida", group="Parametros")
+
+techoUnger = ta.highest(high[1], lookbackVal)
+sueloUnger = ta.lowest(low[1], exitVal)
+
+condicionLong = dentroFecha and (close > techoUnger) and (close > open) and (strategy.position_size == 0)
+condicionExit = (close < sueloUnger)
+
+plot(techoUnger, "Techo Unger", color=color.teal, linewidth=2)
+plot(sueloUnger, "Suelo Unger", color=color.maroon, linewidth=1)
+"""
+
+        elif arch == "williams_r_momentum":
+            wr_p = params.get("wr_period", 14)
+            wr_os = params.get("wr_oversold", -80.0)
+            body = f"""
+// ==========================================
+// 3. INDICADORES: LARRY WILLIAMS %R MOMENTUM
+// ==========================================
+wrPeriod   = input.int({wr_p}, "Williams %R Periodo", group="Parametros")
+wrOversold = input.float({wr_os}, "Nivel Sobreventa", group="Parametros")
+
+wpr = ta.wpr(wrPeriod)
+
+condicionLong = dentroFecha and ta.crossover(wpr, wrOversold) and (strategy.position_size == 0)
+condicionExit = ta.crossunder(wpr, -20.0)
+
+plot(close, "Precio BTC", color=color.gray)
+"""
+
+        elif arch == "hughes_keltner_trend":
+            k_p = params.get("k_period", 20)
+            k_m = params.get("k_mult", 1.5)
+            body = f"""
+// ==========================================
+// 3. INDICADORES: CHUCK HUGHES KELTNER CHANNEL
+// ==========================================
+kPeriod = input.int({k_p}, "Keltner Periodo", group="Parametros")
+kMult   = input.float({k_m}, "Keltner Multiplicador", group="Parametros")
+
+[midK, upperK, lowerK] = ta.kc(close, kPeriod, kMult)
+
+condicionLong = dentroFecha and (low <= lowerK) and (close > lowerK) and (close > open) and (strategy.position_size == 0)
+condicionExit = (close >= upperK)
+
+plot(upperK, "Keltner Upper", color=color.purple)
+plot(midK, "Keltner Mid", color=color.blue)
+plot(lowerK, "Keltner Lower", color=color.fuchsia)
+"""
+
+        elif arch == "hoffman_irb_bounce":
+            body = f"""
+// ==========================================
+// 3. INDICADORES: ROB HOFFMAN INVENTORY RETRACEMENT BAR
+// ==========================================
+cRange     = high - low
+lowerWick  = math.min(open, close) - low
+wickRatio  = cRange > 0 ? (lowerWick / cRange) : 0.0
+
+condicionLong = dentroFecha and (wickRatio >= 0.40) and (close > open) and (strategy.position_size == 0)
+condicionExit = (close >= strategy.position_avg_price * 1.035)
+
+plot(close, "Precio BTC", color=color.yellow)
+"""
+
         execution = f"""
 // ==========================================
 // 4. EJECUCION DE ORDENES Y ALERTAS WEBHOOK
