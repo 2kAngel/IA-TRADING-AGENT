@@ -7,7 +7,7 @@ from src.core.bot import Bot
 from src.core.models import StrategyGenome
 from src.engine.evolution_engine import EvolutionEngine
 from src.engine.simulation_runner import SimulationRunner
-from src.market.data_provider import generate_synthetic_btc_candles
+from src.market.realistic_generator import generate_realistic_btc_market_cycles
 from src.storage.db_manager import DatabaseManager
 
 
@@ -79,10 +79,36 @@ def execute_custom_simulation(num_candles: int = 400, split_ratio: float = 0.60)
     for s in seeds:
         runner.add_bot(s)
 
-    all_candles = generate_synthetic_btc_candles(count=num_candles, start_price=60000.0)
+    # Mercado con regímenes reales, caídas bruscas y trampas de volatilidad
+    all_candles = generate_realistic_btc_market_cycles(count=num_candles, start_price=60000.0)
 
     for i in range(len(all_candles)):
         runner.process_candle(i, all_candles)
+
+    # Liquidar forzosamente posiciones abiertas al finalizar la simulación para auditoría real
+    last_candle = all_candles[-1]
+    final_price = last_candle["close"]
+    for bot in list(runner.active_bots):
+        if bot.portfolio.open_position is not None:
+            target_trade_id = bot.portfolio.trade_history[-1].trade_id
+            closed_t = bot.portfolio.close_trade(
+                trade_id=target_trade_id,
+                exit_price=final_price,
+                commission_rate=runner.commission_rate,
+                slippage_rate=runner.slippage_rate,
+            )
+            runner.db.save_trade(closed_t)
+            for e in bot.portfolio.ledger[-2:]:
+                runner.db.save_ledger_entry(e)
+
+        # Si al liquidar su patrimonio queda por debajo del mínimo operativo (2.0 €), registrar defunción
+        if bot.portfolio.cash_balance < 2.0:
+            bot.status = BotStatus.DEAD
+            bot.death_at = str(last_candle["timestamp"])
+            if bot in runner.active_bots:
+                runner.active_bots.remove(bot)
+            runner.dead_bots.append(bot)
+            runner.db.save_bot(bot)
 
     db.close()
     return {

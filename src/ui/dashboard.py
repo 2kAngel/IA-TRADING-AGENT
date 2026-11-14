@@ -31,8 +31,8 @@ st.sidebar.markdown("Selecciona el tamaño del histórico para someter a los bot
 
 num_velas_input = st.sidebar.slider(
     "Número de Velas (Horas)",
-    minval=100,
-    maxval=3000,
+    min_value=100,
+    max_value=3000,
     value=800,
     step=100,
     help="100 velas ≈ 4 días | 720 velas ≈ 1 mes | 2.160 velas ≈ 3 meses",
@@ -92,6 +92,7 @@ df_bots = pd.DataFrame(leaderboard_data)
 
 with tab_leaderboard:
     st.subheader("Clasificación de Bots por Capital y Rentabilidad")
+    st.caption("🎭 **Regla 'Bufón o Leyenda' activa:** Si un bot cae a $\le 4.50\ \text{€}$, entra en modo desesperado arriesgando el 100% restante para intentar resurgir o morir en el intento.")
     if not df_bots.empty:
         display_df = df_bots[[
             "bot_id", "generation", "status", "capital", "reproductions",

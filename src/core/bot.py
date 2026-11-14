@@ -47,6 +47,15 @@ class Bot:
     def is_alive(self) -> bool:
         return self.status == BotStatus.ACTIVE
 
+    def is_in_bufon_o_leyenda(self, threshold: float = 4.5) -> bool:
+        """
+        REGLA BUFÓN O LEYENDA:
+        Si el capital libre del bot cae por debajo de 4.50 € (está a 1 o 2 trades de la quiebra técnica),
+        entra en modo desesperado: lo apuesta absolutamente todo al siguiente trade sin guardarse nada.
+        O resucita épicamente hacia la gloria (Leyenda), o muere definitivamente (Bufón).
+        """
+        return self.is_alive and (self.portfolio.cash_balance <= threshold) and (self.portfolio.cash_balance >= 2.0)
+
     def evaluate_life_or_death(self, death_threshold: float = 0.0) -> bool:
         """Determina si el bot ha quebrado matemáticamente."""
         if self.is_alive and self.equity <= death_threshold:

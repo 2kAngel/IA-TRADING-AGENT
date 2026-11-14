@@ -43,6 +43,15 @@ class SimulationRunner:
         low_price = current_candle["low"]
         closes = [c["close"] for c in candles[: candle_index + 1]]
 
+        # 0. Limpieza previa: Si un bot sin posición tiene capital < 2.0 EUR, registrar su defunción
+        for bot in list(self.active_bots):
+            if bot.portfolio.open_position is None and bot.portfolio.cash_balance < 2.0:
+                bot.status = BotStatus.DEAD
+                bot.death_at = str(current_candle["timestamp"])
+                self.active_bots.remove(bot)
+                self.dead_bots.append(bot)
+                self.db.save_bot(bot)
+
         # 1. Gestionar salidas de bots con posición abierta
         for bot in list(self.active_bots):
             if bot.portfolio.open_position is not None:
@@ -70,15 +79,26 @@ class SimulationRunner:
                     for e in bot.portfolio.ledger[-2:]:
                         self.db.save_ledger_entry(e)
 
-                    # Evaluar muerte
-                    if not bot.evaluate_life_or_death():
-                        self.active_bots.remove(bot)
+                    # Evaluar muerte por quiebra técnica (capital <= 2.0 EUR)
+                    if not bot.evaluate_life_or_death(death_threshold=2.0):
+                        if bot in self.active_bots:
+                            self.active_bots.remove(bot)
                         self.dead_bots.append(bot)
                         self.db.save_bot(bot)
                         continue
 
-            # 2. Evaluar entradas para bots sin posición
+            # 2. Evaluar entradas para bots sin posición (y vivos con fondos operativos)
             if bot.is_alive and bot.portfolio.open_position is None:
+                # Comprobar si quedó incapacitado de operar por falta de saldo mínimo
+                if bot.portfolio.cash_balance < 2.0:
+                    bot.status = BotStatus.DEAD
+                    bot.death_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                    if bot in self.active_bots:
+                        self.active_bots.remove(bot)
+                    self.dead_bots.append(bot)
+                    self.db.save_bot(bot)
+                    continue
+
                 should_enter = StrategyEvaluator.evaluate_entry(
                     genome=bot.genome,
                     candle_idx=candle_index,
@@ -88,7 +108,15 @@ class SimulationRunner:
 
                 if should_enter:
                     trade_id = str(uuid.uuid4())
+                    
+                    # REGLA BUFÓN O LEYENDA:
+                    # Si el bot está en peligro crítico de quiebra técnica (<= 4.5 €),
+                    # arriesga el 100% absoluto de sus últimos céntimos en un 'All-in' desesperado.
+                    # Si tiene saldo normal (> 4.5 €), invierte su capital regular.
                     allocated = bot.portfolio.cash_balance
+                    if bot.is_in_bufon_o_leyenda():
+                        allocated = bot.portfolio.cash_balance  # Todo lo que queda, sin miramientos
+
                     if allocated >= 2.0:
                         trade = bot.portfolio.open_trade(
                             trade_id=trade_id,
