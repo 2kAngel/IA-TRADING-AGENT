@@ -1,0 +1,45 @@
+# ==========================================
+# BITCOIN EVOLUTION TRADING SYSTEM
+# Archivo de Configuración Global (system_config.yaml)
+# ==========================================
+
+system:
+  name: "Bitcoin Evolution Trading System"
+  version: "1.0.0-fase1"
+  environment: "simulation" # simulation | paper
+  log_level: "INFO"
+
+market:
+  asset: "BTC"
+  quote_currency: "EUR" # BTC/EUR o BTC/USDT
+  symbol: "BTC/EUR"
+  timeframe: "1h" # 1m, 5m, 15m, 1h, 4h
+  exchange: "binance"
+  market_type: "spot"
+  leverage: 1.0 # Spot estricto sin apalancamiento
+  allow_short: false # Long/Flat inicialmente
+
+economics:
+  initial_capital_per_bot: 20.0 # 20.00 EUR
+  reproduction_threshold: 40.0 # Se reproduce al duplicar
+  reproduction_cost: 20.0 # Capital exacto transferido al descendiente
+  death_threshold: 0.0 # Muerte por patrimonio <= 0
+  min_operational_capital: 2.0 # Margen mínimo para comisiones
+
+risk:
+  max_position_size_pct: 100.0 # % del capital del bot destinado a la orden
+  commission_pct: 0.075 # 0.075% tarifa estándar spot
+  slippage_pct: 0.02 # 0.02% deslizamiento estimado
+  max_concurrent_trades_per_bot: 1
+
+evolution:
+  mutation_rate: 0.35 # Probabilidad de mutación por parámetro
+  parameter_mutation_std: 0.15 # +/- 15% cambio relativo gaussiano
+  allow_indicator_replacement: true
+  allow_risk_ratio_mutation: true
+  min_trades_before_evaluation: 5
+
+storage:
+  db_type: "sqlite"
+  db_path: "data/evolution.db"
+  enable_wal: true

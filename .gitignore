@@ -1,0 +1,32 @@
+# Entorno virtual y Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.env
+
+# Pytest y tests
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Base de datos y caches locales
+data/evolution.db
+data/evolution.db-wal
+data/evolution.db-shm
+data/cache/
+
+# Streamlit
+.streamlit/
+
+# Logs del sistema
+logs/
+*.log
+
+# IDEs
+.vscode/
+.idea/

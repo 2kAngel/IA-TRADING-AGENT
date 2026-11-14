@@ -1,0 +1,62 @@
+import os
+import json
+import sqlite3
+from typing import Optional, Dict, Any
+
+DEFAULT_CONFIG_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "config",
+    "system_config.json"
+)
+
+DEFAULT_CONFIG = {
+    "system": {
+        "name": "Bitcoin Evolution Trading System",
+        "version": "1.0.0-fase1",
+        "environment": "simulation",
+        "log_level": "INFO"
+    },
+    "market": {
+        "asset": "BTC",
+        "quote_currency": "EUR",
+        "symbol": "BTC/EUR",
+        "timeframe": "1h",
+        "exchange": "binance",
+        "market_type": "spot",
+        "leverage": 1.0,
+        "allow_short": False
+    },
+    "economics": {
+        "initial_capital_per_bot": 20.0,
+        "reproduction_threshold": 40.0,
+        "reproduction_cost": 20.0,
+        "death_threshold": 0.0,
+        "min_operational_capital": 0.50
+    },
+    "risk": {
+        "max_position_size_pct": 100.0,
+        "commission_pct": 0.075,
+        "slippage_pct": 0.02,
+        "max_concurrent_trades_per_bot": 1
+    },
+    "evolution": {
+        "mutation_rate": 0.35,
+        "parameter_mutation_std": 0.15,
+        "allow_indicator_replacement": True,
+        "allow_risk_ratio_mutation": True,
+        "min_trades_before_evaluation": 5
+    },
+    "storage": {
+        "db_type": "sqlite",
+        "db_path": "data/evolution.db",
+        "enable_wal": True
+    }
+}
+
+
+def load_config(path: Optional[str] = None) -> Dict[str, Any]:
+    target_path = path or DEFAULT_CONFIG_PATH
+    if os.path.exists(target_path):
+        with open(target_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return DEFAULT_CONFIG

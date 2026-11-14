@@ -1,0 +1,64 @@
+# ==========================================
+# UNIVERSO INICIAL DE ESTRATEGIAS E INDICADORES
+# (strategies_catalog.yaml)
+# ==========================================
+
+indicators:
+  trend:
+    - name: "EMA"
+      param_ranges:
+        period: [9, 200]
+    - name: "SMA"
+      param_ranges:
+        period: [10, 200]
+    - name: "Supertrend"
+      param_ranges:
+        atr_period: [7, 21]
+        multiplier: [1.5, 4.0]
+
+  momentum:
+    - name: "RSI"
+      param_ranges:
+        period: [7, 28]
+        oversold: [20, 35]
+        overbought: [65, 80]
+    - name: "MACD"
+      param_ranges:
+        fast_period: [8, 16]
+        slow_period: [20, 32]
+        signal_period: [7, 12]
+
+  volatility:
+    - name: "Donchian"
+      param_ranges:
+        entry_period: [10, 55]
+        exit_period: [5, 25]
+    - name: "ATR"
+      param_ranges:
+        period: [10, 30]
+        sl_multiplier: [1.0, 3.5]
+    - name: "Bollinger"
+      param_ranges:
+        period: [14, 30]
+        std_dev: [1.5, 2.8]
+
+initial_archetypes:
+  - id: "arch_donchian_breakout"
+    family: "trend_breakout"
+    description: "Ruptura de canales Donchian con Stop Loss ATR dinámico"
+    parameters:
+      donchian_entry: 20
+      donchian_exit: 10
+      atr_period: 14
+      atr_sl_mult: 2.0
+      risk_reward_ratio: 2.0
+
+  - id: "arch_trend_pullback_rsi"
+    family: "trend_momentum"
+    description: "Seguimiento de tendencia EMA con entrada en sobreventa RSI"
+    parameters:
+      ema_trend: 50
+      rsi_period: 14
+      rsi_oversold: 30
+      atr_sl_mult: 1.5
+      risk_reward_ratio: 2.0
