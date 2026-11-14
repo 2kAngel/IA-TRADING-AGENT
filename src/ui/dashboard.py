@@ -92,7 +92,7 @@ df_bots = pd.DataFrame(leaderboard_data)
 
 with tab_leaderboard:
     st.subheader("Clasificación de Bots por Capital y Rentabilidad")
-    st.caption("🎭 **Regla 'Bufón o Leyenda' activa:** Si un bot cae a $\le 4.50\ \text{€}$, entra en modo desesperado arriesgando el 100% restante para intentar resurgir o morir en el intento.")
+    st.caption("🎭 **Regla 'Bufón o Leyenda' activa:** Si un bot cae a <= 4.50 €, entra en modo desesperado arriesgando el 100% restante para intentar resurgir o morir en el intento.")
     if not df_bots.empty:
         display_df = df_bots[[
             "bot_id", "generation", "status", "capital", "reproductions",
@@ -112,10 +112,29 @@ with tab_leaderboard:
             "parent_id": "Progenitor",
         }, inplace=True)
 
+        def highlight_bot_status(row):
+            status = row["Estado"]
+            children = row["Hijos"]
+            # Rojo: Muertos
+            if status == "DEAD":
+                return ["background-color: #4a1515; color: #ff9999; font-weight: bold;"] * len(row)
+            # Verde: Vivos con hijos
+            elif status == "ACTIVE" and children > 0:
+                return ["background-color: #12381f; color: #99ffbb; font-weight: bold;"] * len(row)
+            # Azul: Vivos sin hijos
+            elif status == "ACTIVE" and children == 0:
+                return ["background-color: #122538; color: #99ccff;"] * len(row)
+            return [""] * len(row)
+
         st.dataframe(
-            display_df.style.highlight_max(subset=["Capital (€)", "Win Rate (%)", "Profit Factor"], color="#1b4d3e"),
+            display_df.style.apply(highlight_bot_status, axis=1),
             use_container_width=True,
             height=380,
+        )
+        st.markdown(
+            "🔴 **Rojo:** Muertos (quiebra técnica) | "
+            "🟢 **Verde:** Vivos con hijos (progenitores exitosos) | "
+            "🔵 **Azul:** Vivos sin hijos (jóvenes o en camino)"
         )
     else:
         st.info("No hay bots registrados aún.")
@@ -128,16 +147,33 @@ with tab_genealogy:
 
     if nodes:
         df_nodes = pd.DataFrame(nodes)
+        
+        # Cruzar con número de hijos para colorear el árbol
+        children_map = dict(zip(df_bots["bot_id"], df_bots["reproductions"]))
+        def get_category(row):
+            if row["status"] == "DEAD":
+                return "Muerto (Quiebra)"
+            elif children_map.get(row["id"], 0) > 0:
+                return "Vivo con Hijos"
+            else:
+                return "Vivo sin Hijos"
+
+        df_nodes["Categoria"] = df_nodes.apply(get_category, axis=1)
+
         fig_tree = px.scatter(
             df_nodes,
             x="generation",
             y="id",
-            color="status",
-            size=[15] * len(df_nodes),
+            color="Categoria",
+            size=[16] * len(df_nodes),
             hover_name="label",
             title="Distribución de Linajes por Generación",
-            color_discrete_map={"ACTIVE": "#00cc96", "DEAD": "#ef553b"},
-            labels={"generation": "Generación Evolutiva", "id": "Bot ID"},
+            color_discrete_map={
+                "Muerto (Quiebra)": "#ef553b",
+                "Vivo con Hijos": "#00cc96",
+                "Vivo sin Hijos": "#1f77b4",
+            },
+            labels={"generation": "Generación Evolutiva", "id": "Bot ID", "Categoria": "Estado"},
         )
         fig_tree.update_layout(height=400)
         st.plotly_chart(fig_tree, use_container_width=True)
