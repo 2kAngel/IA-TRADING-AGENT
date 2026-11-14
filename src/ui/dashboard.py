@@ -102,51 +102,113 @@ leaderboard_data = stats_engine.get_bot_leaderboard()
 df_bots = pd.DataFrame(leaderboard_data)
 
 with tab_leaderboard:
-    st.subheader("Clasificación de Bots por Capital y Rentabilidad")
-    st.caption("🎭 **Regla 'Bufón o Leyenda' activa:** Si un bot cae a <= 4.50 €, entra en modo desesperado arriesgando el 100% restante para intentar resurgir o morir en el intento.")
+    st.subheader("Clasificación de Bots por Familias y Linajes Genéticos")
+    st.caption("🎭 Cada sección representa una **Semilla Génesis** y su descendencia directa en orden cronológico de nacimiento. Puedes scrollear para analizar cada estrategia y sus mutaciones.")
+
     if not df_bots.empty:
-        display_df = df_bots[[
-            "bot_id", "generation", "status", "capital", "reproductions",
-            "trades", "win_rate", "profit_factor", "realized_pnl", "parent_id"
-        ]].copy()
-        
-        display_df.rename(columns={
-            "bot_id": "ID Bot",
-            "generation": "Gen",
-            "status": "Estado",
-            "capital": "Capital (€)",
-            "reproductions": "Hijos",
-            "trades": "Trades",
-            "win_rate": "Win Rate (%)",
-            "profit_factor": "Profit Factor",
-            "realized_pnl": "PnL (€)",
-            "parent_id": "Progenitor",
-        }, inplace=True)
-
-        def highlight_bot_status(row):
-            status = row["Estado"]
-            children = row["Hijos"]
-            # Rojo: Muertos
-            if status == "DEAD":
-                return ["background-color: #4a1515; color: #ff9999; font-weight: bold;"] * len(row)
-            # Verde: Vivos con hijos
-            elif status == "ACTIVE" and children > 0:
-                return ["background-color: #12381f; color: #99ffbb; font-weight: bold;"] * len(row)
-            # Azul: Vivos sin hijos
-            elif status == "ACTIVE" and children == 0:
-                return ["background-color: #122538; color: #99ccff;"] * len(row)
-            return [""] * len(row)
-
-        st.dataframe(
-            display_df.style.apply(highlight_bot_status, axis=1),
-            use_container_width=True,
-            height=380,
-        )
         st.markdown(
             "🔴 **Rojo:** Muertos (quiebra técnica) | "
             "🟢 **Verde:** Vivos con hijos (progenitores exitosos) | "
             "🔵 **Azul:** Vivos sin hijos (jóvenes o en camino)"
         )
+
+        def highlight_bot_status(row):
+            status = row["Estado"]
+            children = row["Hijos"]
+            if status == "DEAD":
+                return ["background-color: #4a1515; color: #ff9999; font-weight: bold;"] * len(row)
+            elif status == "ACTIVE" and children > 0:
+                return ["background-color: #12381f; color: #99ffbb; font-weight: bold;"] * len(row)
+            elif status == "ACTIVE" and children == 0:
+                return ["background-color: #122538; color: #99ccff;"] * len(row)
+            return [""] * len(row)
+
+        bots_by_id = {b["bot_id"]: b for b in leaderboard_data}
+        children_map = {}
+        for b in leaderboard_data:
+            pid = b["parent_id"]
+            if pid and pid != "RAÍZ (Génesis)":
+                children_map.setdefault(pid, []).append(b["bot_id"])
+
+        roots = [b for b in leaderboard_data if b["generation"] == 0]
+
+        def get_seed_num(b_id):
+            if "SEED" in b_id:
+                try:
+                    return int(b_id.split("SEED")[1].split("_")[0])
+                except Exception:
+                    return 999
+            return 0
+
+        roots.sort(key=lambda x: get_seed_num(x["bot_id"]))
+
+        # Mapeo de nombres descriptivos de campeones por arquetipo o código
+        name_map = {
+            "DONCHIAN": "Richard Dennis (Turtles 1983 - Breakout Donchian)",
+            "MACD": "Gerald Appel (1979 - Momentum Clásico)",
+            "RSI": "J. Welles Wilder (1978 - RSI Pullback)",
+            "BOLL": "John Bollinger (1983 - Mean Reversion)",
+            "UNGER": "Andrea Unger (4x Campeón Mundial - Session Breakout)",
+            "HOFFMAN": "Rob Hoffman (2015 - Inventory Retracement Bar)",
+            "HUGHES": "Chuck Hughes (10x Campeón Mundial - Keltner Trend)",
+            "WILLIAMS": "Larry & Michelle Williams (Récord Histórico 11,376% - Williams %R)",
+            "DAVEY": "Kevin Davey (Campeón Mundial 2006 - Algo Volatility)",
+            "DENNIS": "Richard Dennis (Turtle System 2)",
+        }
+
+        for r in roots:
+            family_members = [r]
+
+            def collect_descendants(parent_id):
+                desc = []
+                for cid in children_map.get(parent_id, []):
+                    if cid in bots_by_id:
+                        child = bots_by_id[cid]
+                        desc.append(child)
+                        desc.extend(collect_descendants(cid))
+                return desc
+
+            family_members.extend(collect_descendants(r["bot_id"]))
+
+            # Parsear datos de la semilla
+            root_code = r["bot_id"].split("-")[0]
+            display_title = name_map.get(root_code, root_code)
+            total_children = sum(m["reproductions"] for m in family_members)
+            alive_count = sum(1 for m in family_members if m["status"] == "ACTIVE")
+            dead_count = sum(1 for m in family_members if m["status"] == "DEAD")
+
+            st.markdown(f"### 🛡️ Linaje: `{r['bot_id']}` — {display_title}")
+            st.caption(
+                f"📊 **Población del Linaje:** {len(family_members)} bots ({alive_count} vivos, {dead_count} muertos) | "
+                f"**Reproducciones totales:** {total_children} | **Capital Semilla:** {r['capital']:.2f} €"
+            )
+
+            df_family = pd.DataFrame(family_members)
+            display_family_df = df_family[[
+                "bot_id", "generation", "status", "capital", "reproductions",
+                "trades", "win_rate", "profit_factor", "realized_pnl", "parent_id"
+            ]].copy()
+
+            display_family_df.rename(columns={
+                "bot_id": "ID Bot",
+                "generation": "Gen",
+                "status": "Estado",
+                "capital": "Capital (€)",
+                "reproductions": "Hijos",
+                "trades": "Trades",
+                "win_rate": "Win Rate (%)",
+                "profit_factor": "Profit Factor",
+                "realized_pnl": "PnL (€)",
+                "parent_id": "Progenitor",
+            }, inplace=True)
+
+            tbl_height = min(320, 40 + len(display_family_df) * 36)
+            st.dataframe(
+                display_family_df.style.apply(highlight_bot_status, axis=1),
+                use_container_width=True,
+                height=tbl_height,
+            )
+            st.markdown("---")
     else:
         st.info("No hay bots registrados aún.")
 
