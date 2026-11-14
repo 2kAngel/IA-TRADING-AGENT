@@ -58,8 +58,13 @@ class SimulationRunner:
                 pos = bot.portfolio.open_position
                 pos.current_price = close_price
 
-                # Evaluar salida técnica o Stop Loss
-                should_exit = StrategyEvaluator.evaluate_exit(
+                # A. COMPROBACIÓN INTRA-BARRA DE STOP LOSS (FÍSICA REAL DE MERCADO)
+                # Si la mecha baja perforó el Stop Loss en cualquier segundo de la vela, salta el SL en pérdida
+                sl_target = pos.entry_price * (1.0 - bot.genome.stop_loss_pct)
+                hit_stop_loss = low_price <= sl_target
+
+                # B. Salida técnica regular (cierre por indicador)
+                should_exit_indicator = StrategyEvaluator.evaluate_exit(
                     genome=bot.genome,
                     candle_idx=candle_index,
                     candles=candles,
@@ -67,11 +72,13 @@ class SimulationRunner:
                     entry_price=pos.entry_price,
                 )
 
-                if should_exit:
+                if hit_stop_loss or should_exit_indicator:
+                    # Si saltó el Stop Loss, se ejecuta al precio exacto del Stop Loss (pérdida)
+                    exit_exec_price = sl_target if hit_stop_loss else close_price
                     target_trade_id = bot.portfolio.trade_history[-1].trade_id
                     closed_t = bot.portfolio.close_trade(
                         trade_id=target_trade_id,
-                        exit_price=close_price,
+                        exit_price=exit_exec_price,
                         commission_rate=self.commission_rate,
                         slippage_rate=self.slippage_rate,
                     )
