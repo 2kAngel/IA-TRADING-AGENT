@@ -590,6 +590,7 @@ with tab_pine:
                 bot_id=target_row["bot_id"],
                 generation=target_row["generation"],
                 genome=genome_obj,
+                leverage=float(active_leverage_val),
             )
             st.code(pine_code, language="pinescript")
             st.download_button(

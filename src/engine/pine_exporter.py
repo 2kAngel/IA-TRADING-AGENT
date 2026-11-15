@@ -9,31 +9,42 @@ class PineScriptExporter:
     """
 
     @staticmethod
-    def export_bot_to_pine_v6(bot_id: str, generation: int, genome: StrategyGenome) -> str:
+    def export_bot_to_pine_v6(
+        bot_id: str, generation: int, genome: StrategyGenome, leverage: float = 1.0
+    ) -> str:
         arch = genome.archetype
         params = genome.parameters
         sl_pct = genome.stop_loss_pct * 100.0
+        lev_val = float(leverage) if leverage >= 1.0 else 1.0
 
         header = f"""//@version=6
-strategy("Bitcoin Evolution - {bot_id} (G{generation})", 
+strategy("Evolution Bot - {bot_id} (G{generation})", 
          overlay=true, 
-         initial_capital=20, 
+         initial_capital=1000, 
          currency=currency.EUR, 
-         default_qty_type=strategy.percent_of_equity, 
-         default_qty_value=100,
+         default_qty_type=strategy.cash, 
+         default_qty_value=20,
          commission_type=strategy.commission.percent,
          commission_value=0.075)
 
 // ==========================================
-// 1. FILTRO DE FECHAS (ERA MODERNA DE BITCOIN)
+// 1. GESTION DE CAPITAL Y APALANCAMIENTO (CFD / ACCIONES / FUTUROS)
 // ==========================================
-anoInicio    = input.int(2024, "Ano de Inicio Backtest", group="Rango Temporal")
-mesInicio    = input.int(1, "Mes de Inicio", minval=1, maxval=12, group="Rango Temporal")
-diaInicio    = input.int(1, "Dia de Inicio", minval=1, maxval=31, group="Rango Temporal")
-dentroFecha  = time >= timestamp(syminfo.timezone, anoInicio, mesInicio, diaInicio, 0, 0)
+modoTamano      = input.string("Capital (€) con Apalancamiento", "Modo de Tamaño de Posición", options=["Capital (€) con Apalancamiento", "1 Contrato / Unidad Fija"], group="Gestión de Capital")
+capitalTrade    = input.float(20.0, "Capital Base por Trade (€)", minval=1.0, group="Gestión de Capital")
+leverage        = input.float({lev_val:.1f}, "Apalancamiento (Leverage x)", minval=1.0, maxval=100.0, group="Gestión de Capital")
 
 // ==========================================
-// 2. IDENTIDAD GENETICA DEL BOT
+// 2. RANGO TEMPORAL (OPCIONAL)
+// ==========================================
+usarFiltroFecha = input.bool(false, "Activar Filtro de Fecha de Inicio", group="Rango Temporal")
+anoInicio       = input.int(2020, "Ano de Inicio", group="Rango Temporal")
+mesInicio       = input.int(1, "Mes de Inicio", minval=1, maxval=12, group="Rango Temporal")
+diaInicio       = input.int(1, "Dia de Inicio", minval=1, maxval=31, group="Rango Temporal")
+dentroFecha     = not usarFiltroFecha or (time >= timestamp(syminfo.timezone, anoInicio, mesInicio, diaInicio, 0, 0))
+
+// ==========================================
+// 3. IDENTIDAD GENETICA DEL BOT
 // ==========================================
 botId        = input.string("{bot_id}", "Bot ID", group="Identidad")
 generation   = input.int({generation}, "Generacion", group="Identidad")
@@ -302,12 +313,19 @@ plot(sma20, "SMA 20", color=color.blue)
 // ==========================================
 var float stopLossLevel = na
 
+// Calculo dinamico de tamano de orden compatible con cualquier activo (CFD fraccional o Futuros enteros)
+float qtyToTrade = (modoTamano == "1 Contrato / Unidad Fija") ? 1.0 : (capitalTrade * leverage) / close
+
+// Salvaguarda para activos que exigen contratos enteros (ej. Futuros CME): si el calculo da < 1, ejecutar 1 contrato
+if (modoTamano != "1 Contrato / Unidad Fija") and (qtyToTrade < 1.0) and (syminfo.type == "futures")
+    qtyToTrade := 1.0
+
 msgBuy  = '{{"bot_id": "' + botId + '", "action": "BUY", "symbol": "' + syminfo.ticker + '", "price": ' + str.tostring(close) + ', "equity": ' + str.tostring(strategy.equity) + '}}'
 msgSell = '{{"bot_id": "' + botId + '", "action": "CLOSE", "symbol": "' + syminfo.ticker + '", "price": ' + str.tostring(close) + ', "equity": ' + str.tostring(strategy.equity) + '}}'
 
 if condicionLong
     stopLossLevel := close * (1.0 - slInputPct)
-    strategy.entry("Long Entry", strategy.long, alert_message=msgBuy)
+    strategy.entry("Long Entry", strategy.long, qty=qtyToTrade, alert_message=msgBuy)
 
 if strategy.position_size > 0
     if condicionExit or (close <= stopLossLevel)

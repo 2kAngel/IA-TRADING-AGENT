@@ -261,3 +261,28 @@ class TestEcosystemCriticalRequirements:
         res_ibe = execute_custom_simulation(num_candles=100, capital_inicial=20.0, asset="IBERDROLA", timeframe="1m")
         assert res_ibe["candles_processed"] > 0
         assert res_ibe["total_active"] + res_ibe["total_dead"] >= 1
+
+    def test_10_pine_exporter_v6_generation(self):
+        """
+        TEST 10: Exportación Pine Script v6 universal.
+        Valida que el generador produce código Pine Script v6 válido
+        con dimensionamiento dinámico y apalancamiento para cualquier arquetipo.
+        """
+        from src.engine.pine_exporter import PineScriptExporter
+
+        genome = StrategyGenome(
+            archetype="macd_momentum",
+            parameters={"macd_fast": 12, "macd_slow": 26, "macd_signal": 9},
+            stop_loss_pct=0.022,
+        )
+        pine = PineScriptExporter.export_bot_to_pine_v6(
+            bot_id="MACD_TEST_BOT",
+            generation=1,
+            genome=genome,
+            leverage=5.0,
+        )
+        assert "//@version=6" in pine
+        assert "strategy.entry" in pine
+        assert "qtyToTrade" in pine
+        assert "leverage" in pine
+        assert "ta.macd" in pine
