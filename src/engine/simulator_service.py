@@ -8,7 +8,7 @@ from src.core.bot import Bot
 from src.core.models import StrategyGenome, BotStatus
 from src.engine.evolution_engine import EvolutionEngine
 from src.engine.simulation_runner import SimulationRunner
-from src.market.realistic_generator import generate_realistic_btc_market_cycles
+from src.market.market_data_provider import get_market_candles, ASSET_CONFIGS, TIMEFRAME_CONFIGS
 from src.storage.db_manager import DatabaseManager
 
 
@@ -182,13 +182,20 @@ CHAMPION_CATALOG = [
 ]
 
 
-def execute_custom_simulation(num_candles: int = 800, capital_inicial: float = 80.0):
+def execute_custom_simulation(
+    num_candles: int = 800,
+    capital_inicial: float = 80.0,
+    asset: str = "BTC",
+    timeframe: str = "1h",
+):
     """
-    Ejecuta una simulación completa:
+    Ejecuta una simulación completa sobre datos de mercado reales o sintéticos:
+    - asset: Clave del activo ('BTC', 'GOLD', 'SP500', 'IBERDROLA').
+    - timeframe: Temporalidad de velas ('1m', '1h', '1w').
     - capital_inicial: Cada 20.0 € crea 1 semilla Génesis.
-    - Las semillas 1 a 4 corresponden a los 4 arquetipos base.
-    - A partir de la 5ª semilla, se asignan rigurosamente estrategias de campeones mundiales
-      de trading (World Cup Trading Championship) en orden descendente de año y rendimiento.
+    - La 1ª semilla es la Estrategia Invertida (Breakout Rango + POC Volumen).
+    - Las semillas 2 a 5 corresponden a los 4 arquetipos técnicos fundacionales.
+    - A partir de la 6ª semilla, se asignan estrategias de campeones mundiales.
     """
     db_path = os.path.join("data", "evolution.db")
     db = DatabaseManager(db_path=db_path)
@@ -239,8 +246,12 @@ def execute_custom_simulation(num_candles: int = 800, capital_inicial: float = 8
     for s in seeds:
         runner.add_bot(s)
 
-    # Mercado con regímenes reales, caídas bruscas y trampas de volatilidad
-    all_candles = generate_realistic_btc_market_cycles(count=num_candles, start_price=60000.0)
+    # Obtener velas reales de mercado (o fallback estocástico) para el activo y temporalidad
+    all_candles = get_market_candles(
+        asset_key=asset,
+        timeframe=timeframe,
+        num_candles=num_candles,
+    )
 
     for i in range(len(all_candles)):
         runner.process_candle(i, all_candles)
@@ -275,4 +286,7 @@ def execute_custom_simulation(num_candles: int = 800, capital_inicial: float = 8
         "total_active": len(runner.active_bots),
         "total_dead": len(runner.dead_bots),
         "total_equity": sum(b.equity for b in runner.active_bots),
+        "asset": asset,
+        "timeframe": timeframe,
+        "candles_processed": len(all_candles),
     }

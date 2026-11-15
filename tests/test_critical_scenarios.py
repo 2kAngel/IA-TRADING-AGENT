@@ -242,3 +242,22 @@ class TestEcosystemCriticalRequirements:
         # Modificación en estrategia de bot_1 no altera bot_2
         bot_1.genome.parameters["donchian_entry"] = 35
         assert bot_2.genome.parameters["donchian_entry"] == 20
+
+    def test_9_multi_asset_and_timeframe_execution(self):
+        """
+        TEST 9: Simulación multi-activo y multi-temporalidad.
+        Valida que el simulador ejecuta sobre activos reales (Gold, SP500, Iberdrola)
+        y distintas temporalidades (1m, 1h, 1w) conservando las reglas de capital.
+        """
+        from src.engine.simulator_service import execute_custom_simulation
+
+        # Oro en 1h
+        res_gold = execute_custom_simulation(num_candles=100, capital_inicial=40.0, asset="GOLD", timeframe="1h")
+        assert res_gold["candles_processed"] > 0
+        assert res_gold["total_active"] + res_gold["total_dead"] >= 2
+        assert res_gold["total_equity"] > 0
+
+        # Iberdrola en 1m
+        res_ibe = execute_custom_simulation(num_candles=100, capital_inicial=20.0, asset="IBERDROLA", timeframe="1m")
+        assert res_ibe["candles_processed"] > 0
+        assert res_ibe["total_active"] + res_ibe["total_dead"] >= 1

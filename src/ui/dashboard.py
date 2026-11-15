@@ -145,16 +145,49 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 from src.engine.statistics_engine import StatisticsEngine
 from src.engine.pine_exporter import PineScriptExporter
 from src.engine.simulator_service import execute_custom_simulation
+from src.market.market_data_provider import ASSET_CONFIGS, TIMEFRAME_CONFIGS
 from src.core.models import StrategyGenome
 
 DB_PATH = os.path.join("data", "evolution.db")
 stats_engine = StatisticsEngine(db_path=DB_PATH)
 
 # ==========================================
-# BARRA LATERAL: CONTROL DE SIMULACIÓN Y VELAS
+# BARRA LATERAL: CONTROL DE SIMULACIÓN Y MERCADO
 # ==========================================
 st.sidebar.header("⚙️ Control de Simulación")
 
+# 1. Selector de Activo
+asset_options = {
+    "BTC": "🪙 Bitcoin (BTC)",
+    "GOLD": "🥇 Oro / Gold (GC=F)",
+    "SP500": "📈 S&P 500 (SPY)",
+    "IBERDROLA": "⚡ Iberdrola (IBE.MC)",
+}
+selected_asset = st.sidebar.selectbox(
+    "Activo Financiero",
+    options=list(asset_options.keys()),
+    format_func=lambda x: asset_options[x],
+    index=0,
+    help="Datos de mercado reales descargados y cacheados localmente.",
+)
+
+# 2. Selector de Temporalidad
+tf_options = {
+    "1m": "⚡ 1 Minuto (1m)",
+    "1h": "⏳ 1 Hora (1h)",
+    "1w": "📅 1 Semana (1w)",
+}
+selected_tf = st.sidebar.selectbox(
+    "Temporalidad de Velas",
+    options=list(tf_options.keys()),
+    format_func=lambda x: tf_options[x],
+    index=1,
+    help="1m: Scalping intradía | 1h: Swing trading | 1w: Macro-tendencias",
+)
+
+st.sidebar.markdown("---")
+
+# 3. Capital Inicial
 capital_input = st.sidebar.number_input(
     "Capital Inicial Total (€)",
     min_value=20,
@@ -167,47 +200,70 @@ capital_input = st.sidebar.number_input(
 semillas_calculadas = max(1, int(capital_input // 20))
 st.sidebar.caption(f"🌱 Población Inicial: **{semillas_calculadas} bot(s) semilla** (20 € c/u).")
 
-num_velas_input = st.sidebar.slider(
-    "Número de Velas (Horas)",
-    min_value=100,
-    max_value=3000,
-    value=800,
-    step=100,
-    help="100 velas ≈ 4 días | 720 velas ≈ 1 mes | 2.160 velas ≈ 3 meses",
-)
+# 4. Número de Velas (adaptado según temporalidad)
+if selected_tf == "1m":
+    slider_min, slider_max, slider_default, slider_step = 100, 2000, 800, 100
+    tf_unit = "minutos"
+    caption_txt = "⏱️ Scalping de alta frecuencia (últimos días de mercado)."
+elif selected_tf == "1h":
+    slider_min, slider_max, slider_default, slider_step = 100, 3000, 800, 100
+    tf_unit = "horas"
+    caption_txt = "📅 Swing trading horario continuo."
+else:
+    slider_min, slider_max, slider_default, slider_step = 20, 500, 100, 10
+    tf_unit = "semanas"
+    caption_txt = "📅 Macro-tendencias históricas de largo plazo."
 
-dias_aprox = round(num_velas_input / 24.0, 1)
-st.sidebar.caption(f"📅 Equivalente aproximado: **{dias_aprox} días** de mercado (velas 1H).")
+num_velas_input = st.sidebar.slider(
+    f"Número de Velas ({tf_unit.capitalize()})",
+    min_value=slider_min,
+    max_value=slider_max,
+    value=slider_default,
+    step=slider_step,
+)
+st.sidebar.caption(caption_txt)
 
 if "simulation_executed" not in st.session_state:
     st.session_state["simulation_executed"] = False
 
 if st.sidebar.button("🚀 Ejecutar Nueva Simulación", type="primary", use_container_width=True):
-    with st.spinner(f"Simulando {semillas_calculadas} semillas ({capital_input} €) a lo largo de {num_velas_input} velas..."):
-        res = execute_custom_simulation(num_candles=num_velas_input, capital_inicial=float(capital_input))
+    with st.spinner(f"Simulando {semillas_calculadas} semillas ({capital_input} €) en {asset_options[selected_asset]} [{tf_options[selected_tf]}] ({num_velas_input} velas)..."):
+        res = execute_custom_simulation(
+            num_candles=num_velas_input,
+            capital_inicial=float(capital_input),
+            asset=selected_asset,
+            timeframe=selected_tf,
+        )
         st.session_state["simulation_executed"] = True
+        st.session_state["active_asset"] = selected_asset
+        st.session_state["active_tf"] = selected_tf
         st.sidebar.success(f"¡Completado! {res['total_active']} bots vivos ({res['total_equity']:.2f} €).")
         st.rerun()
 
 
+active_asset_code = st.session_state.get("active_asset", selected_asset)
+active_tf_code = st.session_state.get("active_tf", selected_tf)
+active_asset_name = asset_options.get(active_asset_code, active_asset_code)
+active_tf_name = tf_options.get(active_tf_code, active_tf_code)
+
 # Comprobar si se ha ejecutado la simulación en esta sesión
 if not st.session_state.get("simulation_executed", False) or not os.path.exists(DB_PATH):
-    st.markdown("""
+    st.markdown(f"""
     <div style="margin-bottom: 0.6rem;">
-        <h2 style="margin: 0; font-size: 1.35rem; font-weight: 700; color: var(--text-color, #1f2937);">🧬 Bitcoin Evolution Trading System</h2>
-        <p style="margin: 0; color: #6b7280; font-size: 0.82rem;">Laboratorio Cuantitativo de Selección Natural, Herencia Genética y Supervivencia para Bitcoin</p>
+        <h2 style="margin: 0; font-size: 1.35rem; font-weight: 700; color: var(--text-color, #1f2937);">🧬 Evolution Trading System — {asset_options[selected_asset]}</h2>
+        <p style="margin: 0; color: #6b7280; font-size: 0.82rem;">Laboratorio Cuantitativo de Selección Natural, Herencia Genética y Supervivencia Multi-Activo</p>
     </div>
     """, unsafe_allow_html=True)
 
-    st.info("👈 **Esperando primera ejecución:** El sistema comienza vacío. Configura el **Capital Inicial Total** y el **Número de Velas** en el panel lateral y pulsa **'🚀 Ejecutar Nueva Simulación'** para comenzar.")
+    st.info("👈 **Esperando primera ejecución:** El sistema comienza vacío. Selecciona el **Activo**, la **Temporalidad**, el **Capital** y pulsa **'🚀 Ejecutar Nueva Simulación'** para comenzar.")
 
     col_a, col_b, col_c = st.columns(3)
     with col_a:
-        st.markdown(f"#### 💰 Capital Inicial Preparado\n**{capital_input} €**  \n({semillas_calculadas} bot(s) semilla Génesis de 20 € c/u)")
+        st.markdown(f"#### 💰 Configuración de Cartera\n- **Activo:** {asset_options[selected_asset]}\n- **Capital:** **{capital_input} €** ({semillas_calculadas} semillas)")
     with col_b:
-        st.markdown(f"#### ⏳ Horizonte Temporal\n**{num_velas_input} Velas Horarias**  \n(~{dias_aprox} días de mercado continuo)")
+        st.markdown(f"#### ⏳ Horizonte Temporal\n- **Temporalidad:** {tf_options[selected_tf]}\n- **Velas:** **{num_velas_input} velas** ({tf_unit})")
     with col_c:
-        st.markdown("#### 🧬 Reglas Biológicas Estrictas\n- 🐣 **Reproducción:** Al alcanzar **40.00 €** (transfiere 20 € a su hijo)\n- 💀 **Muerte técnica:** Si su capital cae a **≤ 4.50 €**")
+        st.markdown("#### 🧬 Reglas Biológicas Estrictas\n- 🐣 **Reproducción:** Al alcanzar **40.00 €** (+20 € al hijo)\n- 💀 **Muerte técnica:** Si su capital cae a **≤ 4.50 €**")
 
     st.markdown("---")
     st.markdown("""
@@ -244,8 +300,9 @@ st.markdown(f"""
 <div class="sticky-summary-panel">
     <div class="sticky-top-row">
         <div class="sticky-brand-title">
-            🧬 Bitcoin Evolution Trading System
-            <span class="sticky-brand-subtitle">Laboratorio Cuantitativo de Selección Natural para Bitcoin</span>
+            🧬 Evolution Trading System — {active_asset_name}
+            <span style="font-size:0.75rem; color:#2563eb; background:rgba(37,99,235,0.12); padding:2px 7px; border-radius:8px; font-weight:600; margin-left:6px;">{active_tf_name}</span>
+            <span class="sticky-brand-subtitle">Laboratorio Cuantitativo de Selección Natural</span>
         </div>
     </div>
     <div class="metrics-strip">
