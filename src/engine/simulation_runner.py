@@ -21,12 +21,14 @@ class SimulationRunner:
         commission_rate: float = 0.0,
         slippage_rate: float = 0.0002,
         leverage: float = 1.0,
+        symbol: str = "CFD",
     ):
         self.db = db
         self.evolution_engine = evolution_engine or EvolutionEngine()
         self.commission_rate = commission_rate
         self.slippage_rate = slippage_rate
         self.leverage = leverage
+        self.symbol = symbol
         self.active_bots: List[Bot] = []
         self.dead_bots: List[Bot] = []
 
@@ -127,7 +129,7 @@ class SimulationRunner:
                     if allocated >= 2.0:
                         trade = bot.portfolio.open_trade(
                             trade_id=trade_id,
-                            symbol="CFD",
+                            symbol=self.symbol,
                             price=close_price,
                             capital_to_invest=allocated,
                             commission_rate=self.commission_rate,

@@ -8,7 +8,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 st.set_page_config(
-    page_title="Bitcoin Evolution - Trading Dashboard",
+    page_title="Evolution Trading System - Multi-Asset Lab",
     page_icon="🧬",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -270,7 +270,7 @@ if not st.session_state.get("simulation_executed", False) or not os.path.exists(
     st.markdown(f"""
     <div style="margin-bottom: 0.6rem;">
         <h2 style="margin: 0; font-size: 1.35rem; font-weight: 700; color: var(--text-color, #1f2937);">🧬 Evolution Trading System — {asset_options[selected_asset]}</h2>
-        <p style="margin: 0; color: #6b7280; font-size: 0.82rem;">Laboratorio Cuantitativo de Selección Natural, Herencia Genética y Supervivencia Multi-Activo</p>
+        <p style="margin: 0; color: #6b7280; font-size: 0.82rem;">Laboratorio Cuantitativo de Selección Natural, Herencia Genética y Supervivencia Multi-Activo (Oro, S&P 500, Iberdrola, Cripto)</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -282,7 +282,7 @@ if not st.session_state.get("simulation_executed", False) or not os.path.exists(
     with col_b:
         st.markdown(f"#### ⏳ Horizonte Temporal\n- **Temporalidad:** {tf_options[selected_tf]}\n- **Velas:** **{num_velas_input} velas** ({tf_unit})")
     with col_c:
-        st.markdown("#### 🧬 Reglas Biológicas Estrictas\n- 🐣 **Reproducción:** Al alcanzar **40.00 €** (+20 € al hijo)\n- 💀 **Muerte técnica:** Si su capital cae a **≤ 4.50 €**")
+        st.markdown("#### 🧬 Reglas Biológicas Estrictas\n- 🐣 **Reproducción:** Al alcanzar **40.00 €** (+20 € al hijo)\n- 💀 **Muerte técnica:** Si su patrimonio cae a **≤ 4.50 €** (margen mínimo de broker)")
 
     st.markdown("---")
     st.markdown("""

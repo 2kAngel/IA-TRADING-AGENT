@@ -209,8 +209,8 @@ $$\text{Capital Total Ecosistema} = \sum_{i=1}^{N_{activos}} \text{Patrimonio}_i
   3. Se acredita exactamente $20,00\ \text{€}$ al nuevo bot recién instanciado.
   4. Ambos continúan con $20,00\ \text{€}$ cada uno.
 
-### 6.2 Regla de Muerte
-- Cuando el patrimonio neto liquidable de un bot llega a $\le 0,00\ \text{€}$ (o cae por debajo de la comisión mínima requerida para abrir una orden de satoshis), el bot pasa al estado `DEAD`.
+### 6.2 Regla de Muerte y Quiebra Técnica
+- Cuando el patrimonio neto liquidable de un bot cae a $\le 4,50\ \text{€}$ (por debajo del margen mínimo de garantía operativo requerido por el broker para abrir o mantener posiciones), el bot es liquidado forzosamente y pasa al estado `DEAD`.
 - No puede volver a operar ni recibir transferencias. Sus datos, métricas y genoma quedan intactos para análisis genealógico e investigación de causas de quiebra.
 
 ---

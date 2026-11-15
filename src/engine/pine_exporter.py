@@ -110,7 +110,7 @@ macdSignal = input.int({signal}, "MACD Signal", group="Parametros")
 condicionLong = dentroFecha and ta.crossover(macdLine, signalLine) and (strategy.position_size == 0)
 condicionExit = ta.crossunder(macdLine, signalLine)
 
-plot(close, "Precio BTC", color=color.gray)
+plot(close, "Precio Activo", color=color.gray)
 """
 
         elif arch == "trend_pullback_rsi":
@@ -191,7 +191,7 @@ wpr = ta.wpr(wrPeriod)
 condicionLong = dentroFecha and ta.crossover(wpr, wrOversold) and (strategy.position_size == 0)
 condicionExit = ta.crossunder(wpr, -20.0)
 
-plot(close, "Precio BTC", color=color.gray)
+plot(close, "Precio Activo", color=color.gray)
 """
 
         elif arch == "hughes_keltner_trend":
@@ -280,7 +280,7 @@ wickRatio  = cRange > 0 ? (lowerWick / cRange) : 0.0
 condicionLong = dentroFecha and (wickRatio >= 0.40) and (close > open) and (strategy.position_size == 0)
 condicionExit = (close >= strategy.position_avg_price * 1.035)
 
-plot(close, "Precio BTC", color=color.yellow)
+plot(close, "Precio Activo", color=color.yellow)
 """
 
         else:

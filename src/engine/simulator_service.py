@@ -216,6 +216,7 @@ def execute_custom_simulation(
         commission_rate=0.0,    # Capital.com: 0% comisiones directas
         slippage_rate=0.0002,   # Capital.com: Spread ultrabajo
         leverage=leverage,
+        symbol=ASSET_CONFIGS.get(asset, {}).get("symbol", "CFD"),
     )
 
     # Calcular número exacto de semillas (mínimo 1)
