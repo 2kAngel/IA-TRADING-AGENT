@@ -14,6 +14,133 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# Inyección de estilos CSS para interfaz ultra-compacta y cabecera FIJA (sticky)
+st.markdown("""
+<style>
+/* 1. Reducir padding excesivo de Streamlit en la parte superior y laterales */
+.block-container {
+    padding-top: 0.8rem !important;
+    padding-bottom: 2rem !important;
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+    max-width: 100% !important;
+}
+
+/* 2. Ocultar botones redundantes superiores (Deploy y menú) para ahorrar espacio */
+.stAppDeployButton {
+    display: none !important;
+}
+#MainMenu {
+    visibility: hidden !important;
+}
+header[data-testid="stHeader"] {
+    background: transparent !important;
+    height: 1.2rem !important;
+}
+
+/* 3. Cabecera fija (Sticky) compacta para el resumen de métricas */
+div[data-testid="stElementContainer"]:has(.sticky-summary-panel),
+div.element-container:has(.sticky-summary-panel) {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 990 !important;
+    background-color: var(--background-color, #ffffff) !important;
+    padding-top: 4px !important;
+    padding-bottom: 8px !important;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.2) !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05) !important;
+    margin-bottom: 8px !important;
+}
+
+.sticky-summary-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
+
+.sticky-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0 2px;
+}
+
+.sticky-brand-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-color, #1f2937);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sticky-brand-subtitle {
+    font-size: 0.78rem;
+    color: #6b7280;
+    font-weight: 400;
+    margin-left: 8px;
+}
+
+.metrics-strip {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    width: 100%;
+}
+
+.metric-pill {
+    background: var(--secondary-background-color, #f8f9fa);
+    border: 1px solid rgba(128, 128, 128, 0.18);
+    border-radius: 6px;
+    padding: 4px 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.metric-pill-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    line-height: 1.1;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.metric-pill-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-color, #111827);
+    line-height: 1.2;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.metric-delta-tag {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.c-green { color: #059669 !important; }
+.c-red { color: #dc2626 !important; }
+.c-gray { color: #6b7280 !important; }
+
+/* 4. Pestañas más compactas */
+button[data-baseweb="tab"] {
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+    font-size: 0.88rem !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from src.engine.statistics_engine import StatisticsEngine
 from src.engine.pine_exporter import PineScriptExporter
@@ -65,12 +192,15 @@ if st.sidebar.button("🚀 Ejecutar Nueva Simulación", type="primary", use_cont
 st.sidebar.markdown("---")
 st.sidebar.info("💡 **Tip:** Con más de 1.000 velas verás nacer nietos (Gen 2) y bisnietos (Gen 3), y los bots de RSI y Bollinger empezarán a operar.")
 
-st.title("🧬 Bitcoin Evolution Trading System")
-st.caption("Laboratorio Cuantitativo de Selección Natural, Herencia Genética y Supervivencia para Bitcoin")
-
 # Comprobar si se ha ejecutado la simulación en esta sesión
 if not st.session_state.get("simulation_executed", False) or not os.path.exists(DB_PATH):
-    st.markdown("---")
+    st.markdown("""
+    <div style="margin-bottom: 0.6rem;">
+        <h2 style="margin: 0; font-size: 1.35rem; font-weight: 700; color: var(--text-color, #1f2937);">🧬 Bitcoin Evolution Trading System</h2>
+        <p style="margin: 0; color: #6b7280; font-size: 0.82rem;">Laboratorio Cuantitativo de Selección Natural, Herencia Genética y Supervivencia para Bitcoin</p>
+    </div>
+    """, unsafe_allow_html=True)
+
     st.info("👈 **Esperando primera ejecución:** El sistema comienza vacío. Configura el **Capital Inicial Total** y el **Número de Velas** en el panel lateral y pulsa **'🚀 Ejecutar Nueva Simulación'** para comenzar.")
 
     col_a, col_b, col_c = st.columns(3)
@@ -99,23 +229,56 @@ if not st.session_state.get("simulation_executed", False) or not os.path.exists(
     st.stop()
 
 # ==========================================
-# 1. PANEL GENERAL
+# 1. PANEL GENERAL FIJO Y COMPACTO (STICKY HEADER)
 # ==========================================
 overview = stats_engine.get_ecosystem_overview()
 
-col1, col2, col3, col4, col5 = st.columns(5)
-with col1:
-    st.metric("Capital Ecosistema", f"{overview['current_capital']:.2f} €", delta=f"{overview['net_profit']:.2f} €")
-with col2:
-    st.metric("Bots Activos", f"{overview['active_bots']}", delta=f"-{overview['dead_bots']} muertos" if overview['dead_bots'] > 0 else "0 muertos")
-with col3:
-    st.metric("Máxima Generación", f"Gen {overview['max_generation']}")
-with col4:
-    st.metric("Total Reproducciones", f"{overview['total_reproductions']}")
-with col5:
-    st.metric("ROI Global Ecosistema", f"{overview['roi_pct']:.2f} %")
+delta_sign = "+" if overview['net_profit'] > 0 else ""
+profit_cls = "c-green" if overview['net_profit'] > 0 else ("c-red" if overview['net_profit'] < 0 else "c-gray")
+roi_cls = "c-green" if overview['roi_pct'] > 0 else ("c-red" if overview['roi_pct'] < 0 else "c-gray")
+roi_sign = "+" if overview['roi_pct'] > 0 else ""
 
-st.markdown("---")
+dead_count = overview['dead_bots']
+dead_tag = f"<span class='metric-delta-tag c-red'>(-{dead_count} muertos)</span>" if dead_count > 0 else "<span class='metric-delta-tag c-gray'>(0 muertos)</span>"
+
+st.markdown(f"""
+<div class="sticky-summary-panel">
+    <div class="sticky-top-row">
+        <div class="sticky-brand-title">
+            🧬 Bitcoin Evolution Trading System
+            <span class="sticky-brand-subtitle">Laboratorio Cuantitativo de Selección Natural para Bitcoin</span>
+        </div>
+    </div>
+    <div class="metrics-strip">
+        <div class="metric-pill">
+            <span class="metric-pill-label">Capital Ecosistema</span>
+            <div class="metric-pill-value">
+                {overview['current_capital']:.2f} €
+                <span class="metric-delta-tag {profit_cls}">({delta_sign}{overview['net_profit']:.2f} €)</span>
+            </div>
+        </div>
+        <div class="metric-pill">
+            <span class="metric-pill-label">Bots Activos</span>
+            <div class="metric-pill-value">
+                {overview['active_bots']}
+                {dead_tag}
+            </div>
+        </div>
+        <div class="metric-pill">
+            <span class="metric-pill-label">Máxima Generación</span>
+            <div class="metric-pill-value">Gen {overview['max_generation']}</div>
+        </div>
+        <div class="metric-pill">
+            <span class="metric-pill-label">Total Reproducciones</span>
+            <div class="metric-pill-value">{overview['total_reproductions']} 🐣</div>
+        </div>
+        <div class="metric-pill">
+            <span class="metric-pill-label">ROI Global Ecosistema</span>
+            <div class="metric-pill-value {roi_cls}">{roi_sign}{overview['roi_pct']:.2f} %</div>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # ==========================================
 # 2. PESTAÑAS PRINCIPALES
@@ -132,15 +295,19 @@ leaderboard_data = stats_engine.get_bot_leaderboard()
 df_bots = pd.DataFrame(leaderboard_data)
 
 with tab_leaderboard:
-    st.subheader("Clasificación de Bots por Familias y Linajes Genéticos")
-    st.caption("🎭 Cada sección representa una **Semilla Génesis** y su descendencia directa en orden cronológico de nacimiento. Puedes scrollear para analizar cada estrategia y sus mutaciones.")
+    st.markdown(
+        "<div style='margin: 4px 0 8px 0; display: flex; justify-content: space-between; align-items: center;'>"
+        "<span style='font-size: 0.95rem; font-weight: 600; color: var(--text-color);'>Clasificación por Familias y Linajes Genéticos</span>"
+        "<span style='font-size: 0.8rem;'>"
+        "🔴 <b style='color:#dc2626;'>Muertos</b> &nbsp;|&nbsp; "
+        "🟢 <b style='color:#059669;'>Vivos con hijos</b> &nbsp;|&nbsp; "
+        "🔵 <b style='color:#2563eb;'>Vivos sin hijos</b>"
+        "</span>"
+        "</div>",
+        unsafe_allow_html=True
+    )
 
     if not df_bots.empty:
-        st.markdown(
-            "🔴 **Rojo:** Muertos (quiebra técnica) | "
-            "🟢 **Verde:** Vivos con hijos (progenitores exitosos) | "
-            "🔵 **Azul:** Vivos sin hijos (jóvenes o en camino)"
-        )
 
         def highlight_bot_status(row):
             status = row["Estado"]
@@ -209,10 +376,14 @@ with tab_leaderboard:
             alive_count = sum(1 for m in family_members if m["status"] == "ACTIVE")
             dead_count = sum(1 for m in family_members if m["status"] == "DEAD")
 
-            st.markdown(f"### 🛡️ Linaje: `{r['bot_id']}` — {display_title}")
-            st.caption(
-                f"📊 **Población del Linaje:** {len(family_members)} bots ({alive_count} vivos, {dead_count} muertos) | "
-                f"**Reproducciones totales:** {total_children} | **Capital Semilla:** {r['capital']:.2f} €"
+            st.markdown(
+                f"<div style='margin-top: 10px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: baseline;'>"
+                f"<span style='font-size: 1.02rem; font-weight: 700; color: var(--text-color);'>🛡️ Linaje: <code>{r['bot_id']}</code> — {display_title}</span>"
+                f"<span style='font-size: 0.8rem; color: #6b7280;'>"
+                f"Población: <b>{len(family_members)}</b> ({alive_count} vivos, {dead_count} muertos) | Hijos: <b>{total_children}</b> | Semilla: <b>{r['capital']:.2f} €</b>"
+                f"</span>"
+                f"</div>",
+                unsafe_allow_html=True
             )
 
             df_family = pd.DataFrame(family_members)
@@ -240,7 +411,7 @@ with tab_leaderboard:
                 use_container_width=True,
                 height=tbl_height,
             )
-            st.markdown("---")
+            st.markdown("<div style='margin-bottom: 14px;'></div>", unsafe_allow_html=True)
     else:
         st.info("No hay bots registrados aún.")
 
