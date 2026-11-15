@@ -23,7 +23,38 @@ class StrategyEvaluator:
         arch = genome.archetype
         params = genome.parameters
 
-        if arch == "donchian_breakout":
+        if arch == "inverted_range_breakout":
+            # Estrategia INVERTIDA (Breakout de Rango + Volumen POC)
+            periodo = params.get("periodo_rango", 15)
+            pct_zona = params.get("pct_zona", 0.15)
+            vol_mult = params.get("vol_mult", 1.1)
+
+            if candle_idx < periodo + 1:
+                return False
+
+            window = candles[candle_idx - periodo : candle_idx + 1]
+            resistencia = max(c["high"] for c in window)
+            soporte = min(c["low"] for c in window)
+            alto_canal = resistencia - soporte
+            if alto_canal <= 0:
+                return False
+
+            # POC (Point of Control ponderado por volumen)
+            vol_total = sum(c.get("volume", 0) for c in window)
+            if vol_total > 0:
+                poc = sum(((c["high"] + c["low"]) / 2.0) * c.get("volume", 0) for c in window) / vol_total
+            else:
+                poc = sum((c["high"] + c["low"]) / 2.0 for c in window) / len(window)
+
+            zona_venta_suelo = resistencia - (alto_canal * pct_zona)
+            vol_medio = vol_total / len(window)
+            c = candles[candle_idx]
+            volumen_valido = c.get("volume", 0) >= (vol_medio * vol_mult)
+
+            # Ruptura alcista con fuerza y volumen sobre el POC
+            return (c["close"] >= zona_venta_suelo) and (c["close"] > c["open"]) and (c["close"] > poc) and volumen_valido
+
+        elif arch == "donchian_breakout":
             entry_p = params.get("donchian_entry", 20)
             if candle_idx < entry_p:
                 return False
@@ -186,7 +217,18 @@ class StrategyEvaluator:
         if current_close <= entry_price * (1.0 - sl_pct):
             return True
 
-        if arch == "donchian_breakout":
+        if arch == "inverted_range_breakout":
+            periodo = params.get("periodo_rango", 15)
+            if candle_idx < periodo + 1:
+                return False
+            window = candles[candle_idx - periodo : candle_idx + 1]
+            resistencia = max(c["high"] for c in window)
+            soporte = min(c["low"] for c in window)
+            alto_canal = resistencia - soporte
+            tp_price = entry_price + (alto_canal * 1.5)
+            return current_close >= tp_price or current_close < soporte
+
+        elif arch == "donchian_breakout":
             exit_p = params.get("donchian_exit", 10)
             if candle_idx < exit_p:
                 return False

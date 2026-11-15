@@ -13,7 +13,17 @@ from src.storage.db_manager import DatabaseManager
 
 
 CHAMPION_CATALOG = [
-    # Semillas 1 a 4: Los 4 arquetipos técnicos fundacionales
+    # Semilla 1: Estrategia Invertida (Breakout de Rango + Volumen POC)
+    {
+        "code": "INVERTIDA",
+        "family": "INVERTIDA",
+        "name": "Estrategia Invertida (Breakout Rango + Volumen POC)",
+        "year": "2024",
+        "archetype": "inverted_range_breakout",
+        "parameters": {"periodo_rango": 15, "pct_zona": 0.15, "vol_mult": 1.1},
+        "stop_loss_pct": 0.020,
+    },
+    # Semillas 2 a 5: Los 4 arquetipos técnicos fundacionales desplazados una posición
     {
         "code": "DONCHIAN",
         "family": "DONCHIAN",
@@ -204,8 +214,8 @@ def execute_custom_simulation(num_candles: int = 800, capital_inicial: float = 8
         year = cfg["year"]
         
         # Suffix con trazabilidad de campeón y año (ej: DONCHIAN-A_G0_M0_DENNIS83, UNGER-E_G0_M0_2012)
-        if i < 4:
-            suffix = f"ROOT_{code}" if num_seeds <= 4 else f"SEED{i+1}_{code}"
+        if i < 5:
+            suffix = f"ROOT_{code}" if num_seeds <= 5 else f"SEED{i+1}_{code}"
         else:
             suffix = f"SEED{i+1}_{year}"
 

@@ -41,7 +41,39 @@ slInputPct   = input.float({sl_pct:.2f}, "Stop Loss (%)", minval=0.1, step=0.1, 
 """
 
         # Lógica específica por arquetipo técnico
-        if arch == "donchian_breakout":
+        if arch == "inverted_range_breakout":
+            periodo = params.get("periodo_rango", 15)
+            pct_zona = params.get("pct_zona", 0.15)
+            vol_mult = params.get("vol_mult", 1.1)
+            body = f"""
+// ==========================================
+// 3. INDICADORES: ESTRATEGIA INVERTIDA (BREAKOUT RANGO + VOLUMEN POC)
+// ==========================================
+periodoRango   = input.int({periodo}, "Periodos Rango", group="Parametros")
+pctZonaEntrada = input.float({pct_zona * 100:.1f}, "Zona Entrada %", group="Parametros") / 100.0
+volumenFiltro  = input.float({vol_mult:.2f}, "Multiplicador Volumen", group="Parametros")
+
+resistencia = ta.highest(high, periodoRango)
+soporte     = ta.lowest(low, periodoRango)
+altoCanal   = resistencia - soporte
+
+volTotal = math.sum(volume, periodoRango)
+poc = volTotal > 0 ? math.sum(hl2 * volume, periodoRango) / volTotal : ta.sma(hl2, periodoRango)
+zonaVentaSuelo = resistencia - (altoCanal * pctZonaEntrada)
+
+volumenMedio = ta.sma(volume, periodoRango)
+volumenValido = volume >= (volumenMedio * volumenFiltro)
+
+condicionLong = dentroFecha and (close >= zonaVentaSuelo) and (close > open) and (close > poc) and volumenValido and (strategy.position_size == 0)
+condicionExit = (close >= (close + altoCanal * 1.5)) or (close < soporte)
+
+plot(resistencia, "Resistencia", color=color.blue, linewidth=2)
+plot(soporte, "Soporte", color=color.blue, linewidth=2)
+plot(poc, "POC", color=color.yellow, linewidth=2)
+plot(zonaVentaSuelo, "Zona Venta/Breakout", color=color.green, linewidth=1)
+"""
+
+        elif arch == "donchian_breakout":
             entry_p = params.get("donchian_entry", 20)
             exit_p = params.get("donchian_exit", 10)
             body = f"""

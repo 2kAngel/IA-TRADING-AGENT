@@ -213,16 +213,17 @@ if not st.session_state.get("simulation_executed", False) or not os.path.exists(
     st.markdown("""
     ### 🏆 Catálogo de Estrategias Iniciales (Orden Riguroso)
     Al pulsar **'🚀 Ejecutar Nueva Simulación'**, los bots semilla se asignarán en estricto orden histórico:
-    1. **Richard Dennis (1983)**: Breakout de Canales Donchian (Turtles)
-    2. **Gerald Appel (1979)**: Momentum y Cruce de Medias MACD Clásico
-    3. **J. Welles Wilder (1978)**: Pullback en Sobreventa RSI
-    4. **John Bollinger (1983)**: Reversión a la Media en Bandas de Bollinger
-    5. **Ivan Scherman (2023)**: Volatility Divergence & Bollinger Exhaustion *(Campeón Mundial 491%)*
-    6. **Stefan Seibert (2022/2020)**: Zeno Price Action Breakout *(Bicampeón Mundial)*
-    7. **Kevin McCormick (2021)**: DeMark TD9 Sequential Exhaustion *(Campeón Mundial 383%)*
-    8. **Rob Hoffman (2015)**: Inventory Retracement Bar Reversal
-    9. **Chuck Hughes (2015/1999)**: Trend Momentum en Canales de Keltner *(10x Campeón Mundial)*
-    10. *...y demás campeones de la World Cup Trading Championship.*
+    1. **Estrategia Invertida (Breakout Rango + POC Volumen)**: Ruptura alcista institucional sobre POC y zona alta
+    2. **Richard Dennis (1983)**: Breakout de Canales Donchian (Turtles)
+    3. **Gerald Appel (1979)**: Momentum y Cruce de Medias MACD Clásico
+    4. **J. Welles Wilder (1978)**: Pullback en Sobreventa RSI
+    5. **John Bollinger (1983)**: Reversión a la Media en Bandas de Bollinger
+    6. **Ivan Scherman (2023)**: Volatility Divergence & Bollinger Exhaustion *(Campeón Mundial 491%)*
+    7. **Stefan Seibert (2022/2020)**: Zeno Price Action Breakout *(Bicampeón Mundial)*
+    8. **Kevin McCormick (2021)**: DeMark TD9 Sequential Exhaustion *(Campeón Mundial 383%)*
+    9. **Rob Hoffman (2015)**: Inventory Retracement Bar Reversal
+    10. **Chuck Hughes (2015/1999)**: Trend Momentum en Canales de Keltner *(10x Campeón Mundial)*
+    11. *...y demás campeones de la World Cup Trading Championship.*
     """)
     st.stop()
 
@@ -339,6 +340,7 @@ with tab_leaderboard:
 
         # Mapeo de nombres descriptivos de campeones por arquetipo o código
         name_map = {
+            "INVERTIDA": "Estrategia Invertida (Breakout Rango + POC Volumen)",
             "DONCHIAN": "Richard Dennis (Turtles 1983 - Breakout Donchian)",
             "MACD": "Gerald Appel (1979 - Momentum Clásico)",
             "RSI": "J. Welles Wilder (1978 - RSI Pullback)",

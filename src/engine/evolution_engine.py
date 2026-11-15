@@ -7,6 +7,11 @@ from src.core.models import StrategyGenome, ReproductionRecord
 from src.core.naming import NamingConvention
 
 ARCHETYPE_PARAM_TEMPLATES = {
+    "inverted_range_breakout": {
+        "periodo_rango": (10, 25),
+        "pct_zona": (0.10, 0.25),
+        "vol_mult": (1.0, 1.4),
+    },
     "donchian_breakout": {
         "donchian_entry": (10, 50),
         "donchian_exit": (5, 25),
