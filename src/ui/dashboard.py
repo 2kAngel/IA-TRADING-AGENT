@@ -189,8 +189,6 @@ if st.sidebar.button("🚀 Ejecutar Nueva Simulación", type="primary", use_cont
         st.sidebar.success(f"¡Completado! {res['total_active']} bots vivos ({res['total_equity']:.2f} €).")
         st.rerun()
 
-st.sidebar.markdown("---")
-st.sidebar.info("💡 **Tip:** Con más de 1.000 velas verás nacer nietos (Gen 2) y bisnietos (Gen 3), y los bots de RSI y Bollinger empezarán a operar.")
 
 # Comprobar si se ha ejecutado la simulación en esta sesión
 if not st.session_state.get("simulation_executed", False) or not os.path.exists(DB_PATH):
