@@ -585,16 +585,18 @@ with tab_pine:
         target_row = df_bots[df_bots["bot_id"] == bot_to_export].iloc[0]
         genome_obj = StrategyGenome.from_dict(json.loads(target_row["genome_json"]))
         
-        pine_code = PineScriptExporter.export_bot_to_pine_v6(
-            bot_id=target_row["bot_id"],
-            generation=target_row["generation"],
-            genome=genome_obj,
-        )
-
-        st.code(pine_code, language="pinescript")
-        st.download_button(
-            label="💾 Descargar archivo .pine",
-            data=pine_code,
-            file_name=f"{target_row['bot_id']}_v6.pine",
-            mime="text/plain",
-        )
+        try:
+            pine_code = PineScriptExporter.export_bot_to_pine_v6(
+                bot_id=target_row["bot_id"],
+                generation=target_row["generation"],
+                genome=genome_obj,
+            )
+            st.code(pine_code, language="pinescript")
+            st.download_button(
+                label="💾 Descargar archivo .pine",
+                data=pine_code,
+                file_name=f"{target_row['bot_id']}_v6.pine",
+                mime="text/plain",
+            )
+        except Exception as e:
+            st.error(f"Error al generar Pine Script: {e}")

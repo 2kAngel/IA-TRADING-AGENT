@@ -214,6 +214,60 @@ plot(midK, "Keltner Mid", color=color.blue)
 plot(lowerK, "Keltner Lower", color=color.fuchsia)
 """
 
+        elif arch == "scherman_volatility_divergence":
+            bb_p = params.get("bb_period", 20)
+            bb_m = params.get("bb_mult", 2.0)
+            body = f"""
+// ==========================================
+// 3. INDICADORES: IVAN SCHERMAN VOLATILITY DIVERGENCE (CHAMPION 2023)
+// ==========================================
+bbPeriod = input.int({bb_p}, "Bollinger Periodo", group="Parametros")
+bbMult   = input.float({bb_m}, "Bollinger Desviacion", group="Parametros")
+
+[midBB, upperBB, lowerBB] = ta.bb(close, bbPeriod, bbMult)
+minLowPrev = ta.lowest(low[1], 10)
+volValido  = volume < volume[1]
+
+condicionLong = dentroFecha and (low <= minLowPrev) and (close > lowerBB) and (close > open) and volValido and (strategy.position_size == 0)
+condicionExit = (close >= midBB)
+
+plot(upperBB, "BB Upper", color=color.red)
+plot(midBB, "BB Mid", color=color.gray)
+plot(lowerBB, "BB Lower", color=color.green)
+"""
+
+        elif arch == "seibert_zeno_price_action":
+            period = params.get("period", 20)
+            body = f"""
+// ==========================================
+// 3. INDICADORES: STEFAN SEIBERT ZENO PRICE ACTION (CHAMPION 2022/2020)
+// ==========================================
+periodVal = input.int({period}, "Periodo Base", group="Parametros")
+smaRef = ta.sma(close, periodVal)
+atrExp = ta.atr(10)
+
+condicionLong = dentroFecha and (close > smaRef) and (high - low > atrExp * 1.2) and (close > open) and (strategy.position_size == 0)
+condicionExit = (close < smaRef) or (close >= strategy.position_avg_price * 1.035)
+
+plot(smaRef, "SMA Base Zeno", color=color.blue, linewidth=2)
+"""
+
+        elif arch == "mccormick_td_exhaustion":
+            lookback = params.get("lookback", 4)
+            body = f"""
+// ==========================================
+// 3. INDICADORES: KEVIN MCCORMICK DEMARK TD9 EXHAUSTION (CHAMPION 2021)
+// ==========================================
+lookbackVal = input.int({lookback}, "Lookback TD", group="Parametros")
+tdBearishCount = ta.barssince(close > close[4])
+tdSetup = tdBearishCount >= 8
+
+condicionLong = dentroFecha and tdSetup and (close > open) and (strategy.position_size == 0)
+condicionExit = (close >= strategy.position_avg_price * 1.025) or (close <= strategy.position_avg_price * (1.0 - slInputPct))
+
+plot(close, "Precio", color=color.orange)
+"""
+
         elif arch == "hoffman_irb_bounce":
             body = f"""
 // ==========================================
@@ -227,6 +281,19 @@ condicionLong = dentroFecha and (wickRatio >= 0.40) and (close > open) and (stra
 condicionExit = (close >= strategy.position_avg_price * 1.035)
 
 plot(close, "Precio BTC", color=color.yellow)
+"""
+
+        else:
+            # Fallback seguro para cualquier estrategia o mutación no mapeada
+            body = f"""
+// ==========================================
+// 3. INDICADORES: PRICE ACTION & TREND BREAKOUT
+// ==========================================
+sma20 = ta.sma(close, 20)
+condicionLong = dentroFecha and ta.crossover(close, sma20) and (strategy.position_size == 0)
+condicionExit = ta.crossunder(close, sma20)
+
+plot(sma20, "SMA 20", color=color.blue)
 """
 
         execution = f"""
