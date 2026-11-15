@@ -537,7 +537,13 @@ with tab_genealogy:
 with tab_equity:
     st.subheader("Evolución del Libro Mayor (Ledger) Contable")
     conn = sqlite3.connect(DB_PATH)
-    ledger_df = pd.read_sql_query("SELECT bot_id, timestamp, balance_after, entry_type FROM ledger_entries ORDER BY entry_id ASC", conn)
+    # Filtrar solo estados consolidados de capital (evita mostrar el efectivo en 0 mientras el dinero está invertido en mercado)
+    ledger_df = pd.read_sql_query(
+        "SELECT bot_id, timestamp, balance_after, entry_type FROM ledger_entries "
+        "WHERE entry_type IN ('INITIAL_CAPITAL', 'TRADE_RETURN', 'REPRODUCTION_DEBIT', 'REPRODUCTION_CREDIT') "
+        "ORDER BY entry_id ASC", 
+        conn
+    )
     conn.close()
 
     if not ledger_df.empty:
@@ -546,11 +552,11 @@ with tab_equity:
             x="timestamp",
             y="balance_after",
             color="bot_id",
-            title="Curvas de Capital Individuales (Regla Inquebrantable de Conservación)",
-            labels={"balance_after": "Saldo en Cartera (€)", "timestamp": "Tiempo"},
+            title="Curvas de Capital Real (Patrimonio Liquidable por Bot)",
+            labels={"balance_after": "Capital Real (€)", "timestamp": "Tiempo"},
         )
         fig_equity.add_hline(y=40.0, line_dash="dash", line_color="green", annotation_text="Umbral de Reproducción (40€)")
-        fig_equity.add_hline(y=0.0, line_dash="dash", line_color="red", annotation_text="Umbral de Muerte (0€)")
+        fig_equity.add_hline(y=4.5, line_dash="dash", line_color="red", annotation_text="Umbral de Muerte (4.50€)")
         fig_equity.update_layout(height=450)
         st.plotly_chart(fig_equity, use_container_width=True)
     else:
