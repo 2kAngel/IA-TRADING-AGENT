@@ -18,13 +18,15 @@ class SimulationRunner:
         self,
         db: DatabaseManager,
         evolution_engine: Optional[EvolutionEngine] = None,
-        commission_rate: float = 0.00075,
+        commission_rate: float = 0.0,
         slippage_rate: float = 0.0002,
+        leverage: float = 1.0,
     ):
         self.db = db
         self.evolution_engine = evolution_engine or EvolutionEngine()
         self.commission_rate = commission_rate
         self.slippage_rate = slippage_rate
+        self.leverage = leverage
         self.active_bots: List[Bot] = []
         self.dead_bots: List[Bot] = []
 
@@ -40,12 +42,13 @@ class SimulationRunner:
 
         current_candle = candles[candle_index]
         close_price = current_candle["close"]
+        high_price = current_candle["high"]
         low_price = current_candle["low"]
         closes = [c["close"] for c in candles[: candle_index + 1]]
 
-        # 0. Limpieza previa: Si un bot sin posición tiene capital < 2.0 EUR, registrar su defunción
+        # 0. Limpieza previa: Si un bot sin posición tiene capital <= 4.5 EUR, registrar su defunción
         for bot in list(self.active_bots):
-            if bot.portfolio.open_position is None and bot.portfolio.cash_balance < 2.0:
+            if bot.portfolio.open_position is None and bot.portfolio.cash_balance <= 4.5:
                 bot.status = BotStatus.DEAD
                 bot.death_at = str(current_candle["timestamp"])
                 self.active_bots.remove(bot)
@@ -58,12 +61,18 @@ class SimulationRunner:
                 pos = bot.portfolio.open_position
                 pos.current_price = close_price
 
-                # A. COMPROBACIÓN INTRA-BARRA DE STOP LOSS (FÍSICA REAL DE MERCADO)
-                # Si la mecha baja perforó el Stop Loss en cualquier segundo de la vela, salta el SL en pérdida
-                sl_target = pos.entry_price * (1.0 - bot.genome.stop_loss_pct)
-                hit_stop_loss = low_price <= sl_target
+                # Comprobación de Stop Loss y liquidación por margen intra-barra
+                if pos.side == OrderSide.BUY:
+                    sl_target = pos.entry_price * (1.0 - bot.genome.stop_loss_pct)
+                    hit_stop_loss = low_price <= sl_target
+                    max_loss_intra = (pos.entry_price - low_price) * pos.quantity
+                    is_liquidated = (pos.cost_basis - max_loss_intra) <= 4.5
+                else:
+                    sl_target = pos.entry_price * (1.0 + bot.genome.stop_loss_pct)
+                    hit_stop_loss = high_price >= sl_target
+                    max_loss_intra = (high_price - pos.entry_price) * pos.quantity
+                    is_liquidated = (pos.cost_basis - max_loss_intra) <= 4.5
 
-                # B. Salida técnica regular (cierre por indicador)
                 should_exit_indicator = StrategyEvaluator.evaluate_exit(
                     genome=bot.genome,
                     candle_idx=candle_index,
@@ -72,9 +81,8 @@ class SimulationRunner:
                     entry_price=pos.entry_price,
                 )
 
-                if hit_stop_loss or should_exit_indicator:
-                    # Si saltó el Stop Loss, se ejecuta al precio exacto del Stop Loss (pérdida)
-                    exit_exec_price = sl_target if hit_stop_loss else close_price
+                if hit_stop_loss or is_liquidated or should_exit_indicator:
+                    exit_exec_price = sl_target if (hit_stop_loss or is_liquidated) else close_price
                     target_trade_id = bot.portfolio.trade_history[-1].trade_id
                     closed_t = bot.portfolio.close_trade(
                         trade_id=target_trade_id,
@@ -86,8 +94,8 @@ class SimulationRunner:
                     for e in bot.portfolio.ledger[-2:]:
                         self.db.save_ledger_entry(e)
 
-                    # Evaluar muerte por quiebra técnica (capital <= 2.0 EUR)
-                    if not bot.evaluate_life_or_death(death_threshold=2.0):
+                    # Evaluar muerte por quiebra técnica (capital <= 4.5 EUR)
+                    if not bot.evaluate_life_or_death(death_threshold=4.5):
                         if bot in self.active_bots:
                             self.active_bots.remove(bot)
                         self.dead_bots.append(bot)
@@ -96,10 +104,9 @@ class SimulationRunner:
 
             # 2. Evaluar entradas para bots sin posición (y vivos con fondos operativos)
             if bot.is_alive and bot.portfolio.open_position is None:
-                # Comprobar si quedó incapacitado de operar por falta de saldo mínimo
-                if bot.portfolio.cash_balance < 2.0:
+                if bot.portfolio.cash_balance <= 4.5:
                     bot.status = BotStatus.DEAD
-                    bot.death_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                    bot.death_at = str(current_candle["timestamp"])
                     if bot in self.active_bots:
                         self.active_bots.remove(bot)
                     self.dead_bots.append(bot)
@@ -115,23 +122,18 @@ class SimulationRunner:
 
                 if should_enter:
                     trade_id = str(uuid.uuid4())
-                    
-                    # REGLA BUFÓN O LEYENDA:
-                    # Si el bot está en peligro crítico de quiebra técnica (<= 4.5 €),
-                    # arriesga el 100% absoluto de sus últimos céntimos en un 'All-in' desesperado.
-                    # Si tiene saldo normal (> 4.5 €), invierte su capital regular.
                     allocated = bot.portfolio.cash_balance
-                    if bot.is_in_bufon_o_leyenda():
-                        allocated = bot.portfolio.cash_balance  # Todo lo que queda, sin miramientos
 
                     if allocated >= 2.0:
                         trade = bot.portfolio.open_trade(
                             trade_id=trade_id,
-                            symbol="BTC/EUR",
+                            symbol="CFD",
                             price=close_price,
                             capital_to_invest=allocated,
                             commission_rate=self.commission_rate,
                             slippage_rate=self.slippage_rate,
+                            side=OrderSide.BUY,
+                            leverage=self.leverage,
                         )
                         self.db.save_trade(trade)
                         for e in bot.portfolio.ledger[-2:]:

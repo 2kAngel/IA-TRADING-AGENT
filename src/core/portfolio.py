@@ -63,6 +63,8 @@ class BotPortfolio:
         capital_to_invest: float,
         commission_rate: float = 0.00075,
         slippage_rate: float = 0.0002,
+        side: OrderSide = OrderSide.BUY,
+        leverage: float = 1.0,
     ) -> TradeRecord:
         if self.open_position is not None:
             raise ValueError(f"Bot {self.bot_id} ya tiene una posición abierta.")
@@ -72,13 +74,15 @@ class BotPortfolio:
                 f"Capital insuficiente. Requerido: {capital_to_invest:.2f}€, Disponible: {self.cash_balance:.2f}€"
             )
 
-        # Aplicar slippage en la compra (precio ligeramente superior)
-        effective_price = price * (1.0 + slippage_rate)
+        # Aplicar slippage según lado (compra o venta corta)
+        slippage_mult = 1.0 + slippage_rate if side == OrderSide.BUY else 1.0 - slippage_rate
+        effective_price = price * slippage_mult
         commission = capital_to_invest * commission_rate
-        net_investment = capital_to_invest - commission
-        quantity = net_investment / effective_price
+        net_margin = capital_to_invest - commission
+        # La cantidad controlada se multiplica por el apalancamiento
+        quantity = (net_margin * leverage) / effective_price
 
-        # Descontar del efectivo
+        # Descontar del efectivo el margen aportado
         self.cash_balance -= capital_to_invest
         self.allocated_in_positions = capital_to_invest
 
@@ -101,13 +105,15 @@ class BotPortfolio:
             current_price=effective_price,
             entry_time=now_str,
             cost_basis=capital_to_invest,
+            side=side,
+            leverage=leverage,
         )
 
         record = TradeRecord(
             trade_id=trade_id,
             bot_id=self.bot_id,
             symbol=symbol,
-            side=OrderSide.BUY,
+            side=side,
             entry_price=effective_price,
             exit_price=None,
             quantity=quantity,
@@ -131,13 +137,19 @@ class BotPortfolio:
         if self.open_position is None:
             raise ValueError(f"Bot {self.bot_id} no tiene ninguna posición abierta para cerrar.")
 
-        # Aplicar slippage en venta (precio ligeramente inferior)
-        effective_exit = exit_price * (1.0 - slippage_rate)
-        gross_return = self.open_position.quantity * effective_exit
-        commission = gross_return * commission_rate
-        net_return = gross_return - commission
+        pos = self.open_position
+        if pos.side == OrderSide.BUY:
+            effective_exit = exit_price * (1.0 - slippage_rate)
+            pnl = (effective_exit - pos.entry_price) * pos.quantity
+        else: # SHORT
+            effective_exit = exit_price * (1.0 + slippage_rate)
+            pnl = (pos.entry_price - effective_exit) * pos.quantity
 
-        net_pnl = net_return - self.open_position.cost_basis
+        gross_return = max(0.0, pos.cost_basis + pnl)
+        commission = (pos.quantity * effective_exit / max(1.0, pos.leverage)) * commission_rate
+        net_return = max(0.0, gross_return - commission)
+
+        net_pnl = net_return - pos.cost_basis
 
         # Retorno de capital a efectivo
         self.cash_balance += net_return

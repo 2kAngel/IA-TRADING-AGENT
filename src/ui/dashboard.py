@@ -223,28 +223,47 @@ num_velas_input = st.sidebar.slider(
 )
 st.sidebar.caption(caption_txt)
 
+# 5. Selector de Apalancamiento
+leverage_options = {
+    1.0: "1x (Sin apalancamiento / Spot)",
+    2.0: "2x (Apalancamiento x2)",
+    5.0: "5x (Apalancamiento x5)",
+}
+selected_leverage = st.sidebar.selectbox(
+    "Apalancamiento (CFD Capital.com)",
+    options=list(leverage_options.keys()),
+    format_func=lambda x: leverage_options[x],
+    index=0,
+    help="Multiplica los beneficios y pérdidas en cada trade. Modelo Capital.com (0% comisión fija + spread).",
+)
+
 if "simulation_executed" not in st.session_state:
     st.session_state["simulation_executed"] = False
 
 if st.sidebar.button("🚀 Ejecutar Nueva Simulación", type="primary", use_container_width=True):
-    with st.spinner(f"Simulando {semillas_calculadas} semillas ({capital_input} €) en {asset_options[selected_asset]} [{tf_options[selected_tf]}] ({num_velas_input} velas)..."):
+    lev_str = f"{int(selected_leverage)}x" if selected_leverage > 1.0 else "1x"
+    with st.spinner(f"Simulando {semillas_calculadas} semillas ({capital_input} €) en {asset_options[selected_asset]} [{tf_options[selected_tf]}] {lev_str} ({num_velas_input} velas)..."):
         res = execute_custom_simulation(
             num_candles=num_velas_input,
             capital_inicial=float(capital_input),
             asset=selected_asset,
             timeframe=selected_tf,
+            leverage=float(selected_leverage),
         )
         st.session_state["simulation_executed"] = True
         st.session_state["active_asset"] = selected_asset
         st.session_state["active_tf"] = selected_tf
+        st.session_state["active_leverage"] = selected_leverage
         st.sidebar.success(f"¡Completado! {res['total_active']} bots vivos ({res['total_equity']:.2f} €).")
         st.rerun()
 
 
 active_asset_code = st.session_state.get("active_asset", selected_asset)
 active_tf_code = st.session_state.get("active_tf", selected_tf)
+active_leverage_val = st.session_state.get("active_leverage", selected_leverage)
 active_asset_name = asset_options.get(active_asset_code, active_asset_code)
 active_tf_name = tf_options.get(active_tf_code, active_tf_code)
+active_lev_badge = f"{int(active_leverage_val)}x" if active_leverage_val > 1.0 else "1x (Spot)"
 
 # Comprobar si se ha ejecutado la simulación en esta sesión
 if not st.session_state.get("simulation_executed", False) or not os.path.exists(DB_PATH):
@@ -259,7 +278,7 @@ if not st.session_state.get("simulation_executed", False) or not os.path.exists(
 
     col_a, col_b, col_c = st.columns(3)
     with col_a:
-        st.markdown(f"#### 💰 Configuración de Cartera\n- **Activo:** {asset_options[selected_asset]}\n- **Capital:** **{capital_input} €** ({semillas_calculadas} semillas)")
+        st.markdown(f"#### 💰 Cartera y Margen\n- **Activo:** {asset_options[selected_asset]}\n- **Capital:** **{capital_input} €** ({semillas_calculadas} semillas)\n- **Apalancamiento:** **{leverage_options[selected_leverage]}**")
     with col_b:
         st.markdown(f"#### ⏳ Horizonte Temporal\n- **Temporalidad:** {tf_options[selected_tf]}\n- **Velas:** **{num_velas_input} velas** ({tf_unit})")
     with col_c:
@@ -302,6 +321,7 @@ st.markdown(f"""
         <div class="sticky-brand-title">
             🧬 Evolution Trading System — {active_asset_name}
             <span style="font-size:0.75rem; color:#2563eb; background:rgba(37,99,235,0.12); padding:2px 7px; border-radius:8px; font-weight:600; margin-left:6px;">{active_tf_name}</span>
+            <span style="font-size:0.75rem; color:#d97706; background:rgba(217,119,6,0.12); padding:2px 7px; border-radius:8px; font-weight:600; margin-left:4px;">{active_lev_badge}</span>
             <span class="sticky-brand-subtitle">Laboratorio Cuantitativo de Selección Natural</span>
         </div>
     </div>

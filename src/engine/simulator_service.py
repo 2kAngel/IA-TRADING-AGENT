@@ -187,11 +187,14 @@ def execute_custom_simulation(
     capital_inicial: float = 80.0,
     asset: str = "BTC",
     timeframe: str = "1h",
+    leverage: float = 1.0,
 ):
     """
     Ejecuta una simulación completa sobre datos de mercado reales o sintéticos:
     - asset: Clave del activo ('BTC', 'GOLD', 'SP500', 'IBERDROLA').
     - timeframe: Temporalidad de velas ('1m', '1h', '1w').
+    - leverage: Apalancamiento por trade (1.0 = Spot, 2.0 = 2x, 5.0 = 5x).
+    - Modelo Capital.com: 0% comisión fija directa + Spread real.
     - capital_inicial: Cada 20.0 € crea 1 semilla Génesis.
     - La 1ª semilla es la Estrategia Invertida (Breakout Rango + POC Volumen).
     - Las semillas 2 a 5 corresponden a los 4 arquetipos técnicos fundacionales.
@@ -207,7 +210,13 @@ def execute_custom_simulation(
         mutation_rate=0.45,
         speciation_rate=0.20,
     )
-    runner = SimulationRunner(db=db, evolution_engine=engine)
+    runner = SimulationRunner(
+        db=db,
+        evolution_engine=engine,
+        commission_rate=0.0,    # Capital.com: 0% comisiones directas
+        slippage_rate=0.0002,   # Capital.com: Spread ultrabajo
+        leverage=leverage,
+    )
 
     # Calcular número exacto de semillas (mínimo 1)
     num_seeds = max(1, int(capital_inicial // 20.0))

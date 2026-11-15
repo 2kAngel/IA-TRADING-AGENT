@@ -49,11 +49,17 @@ class Position:
     entry_price: float
     current_price: float
     entry_time: str
-    cost_basis: float  # Capital in cash allocated
+    cost_basis: float  # Capital en efectivo aportado como margen
+    side: OrderSide = OrderSide.BUY
+    leverage: float = 1.0
 
     @property
     def market_value(self) -> float:
-        return self.quantity * self.current_price
+        if self.side == OrderSide.SELL:
+            pnl = (self.entry_price - self.current_price) * self.quantity
+        else:
+            pnl = (self.current_price - self.entry_price) * self.quantity
+        return max(0.0, self.cost_basis + pnl)
 
     @property
     def unrealized_pnl(self) -> float:
