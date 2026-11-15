@@ -52,9 +52,13 @@ num_velas_input = st.sidebar.slider(
 dias_aprox = round(num_velas_input / 24.0, 1)
 st.sidebar.caption(f"📅 Equivalente aproximado: **{dias_aprox} días** de mercado (velas 1H).")
 
+if "simulation_executed" not in st.session_state:
+    st.session_state["simulation_executed"] = False
+
 if st.sidebar.button("🚀 Ejecutar Nueva Simulación", type="primary", use_container_width=True):
     with st.spinner(f"Simulando {semillas_calculadas} semillas ({capital_input} €) a lo largo de {num_velas_input} velas..."):
         res = execute_custom_simulation(num_candles=num_velas_input, capital_inicial=float(capital_input))
+        st.session_state["simulation_executed"] = True
         st.sidebar.success(f"¡Completado! {res['total_active']} bots vivos ({res['total_equity']:.2f} €).")
         st.rerun()
 
@@ -64,8 +68,34 @@ st.sidebar.info("💡 **Tip:** Con más de 1.000 velas verás nacer nietos (Gen 
 st.title("🧬 Bitcoin Evolution Trading System")
 st.caption("Laboratorio Cuantitativo de Selección Natural, Herencia Genética y Supervivencia para Bitcoin")
 
-if not os.path.exists(DB_PATH):
-    st.warning("⚠️ No se ha encontrado la base de datos en `data/evolution.db`.")
+# Comprobar si se ha ejecutado la simulación en esta sesión
+if not st.session_state.get("simulation_executed", False) or not os.path.exists(DB_PATH):
+    st.markdown("---")
+    st.info("👈 **Esperando primera ejecución:** El sistema comienza vacío. Configura el **Capital Inicial Total** y el **Número de Velas** en el panel lateral y pulsa **'🚀 Ejecutar Nueva Simulación'** para comenzar.")
+
+    col_a, col_b, col_c = st.columns(3)
+    with col_a:
+        st.markdown(f"#### 💰 Capital Inicial Preparado\n**{capital_input} €**  \n({semillas_calculadas} bot(s) semilla Génesis de 20 € c/u)")
+    with col_b:
+        st.markdown(f"#### ⏳ Horizonte Temporal\n**{num_velas_input} Velas Horarias**  \n(~{dias_aprox} días de mercado continuo)")
+    with col_c:
+        st.markdown("#### 🧬 Reglas Biológicas Estrictas\n- 🐣 **Reproducción:** Al alcanzar **40.00 €** (transfiere 20 € a su hijo)\n- 💀 **Muerte técnica:** Si su capital cae a **≤ 4.50 €**")
+
+    st.markdown("---")
+    st.markdown("""
+    ### 🏆 Catálogo de Estrategias Iniciales (Orden Riguroso)
+    Al pulsar **'🚀 Ejecutar Nueva Simulación'**, los bots semilla se asignarán en estricto orden histórico:
+    1. **Richard Dennis (1983)**: Breakout de Canales Donchian (Turtles)
+    2. **Gerald Appel (1979)**: Momentum y Cruce de Medias MACD Clásico
+    3. **J. Welles Wilder (1978)**: Pullback en Sobreventa RSI
+    4. **John Bollinger (1983)**: Reversión a la Media en Bandas de Bollinger
+    5. **Ivan Scherman (2023)**: Volatility Divergence & Bollinger Exhaustion *(Campeón Mundial 491%)*
+    6. **Stefan Seibert (2022/2020)**: Zeno Price Action Breakout *(Bicampeón Mundial)*
+    7. **Kevin McCormick (2021)**: DeMark TD9 Sequential Exhaustion *(Campeón Mundial 383%)*
+    8. **Rob Hoffman (2015)**: Inventory Retracement Bar Reversal
+    9. **Chuck Hughes (2015/1999)**: Trend Momentum en Canales de Keltner *(10x Campeón Mundial)*
+    10. *...y demás campeones de la World Cup Trading Championship.*
+    """)
     st.stop()
 
 # ==========================================
