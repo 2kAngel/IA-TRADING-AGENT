@@ -185,8 +185,8 @@ def execute_custom_simulation(num_candles: int = 800, capital_inicial: float = 8
     db.clear_all_data()
 
     engine = EvolutionEngine(
-        reproduction_threshold=28.0,
-        reproduction_cost=14.0,
+        reproduction_threshold=40.0,
+        reproduction_cost=20.0,
         mutation_rate=0.45,
         speciation_rate=0.20,
     )
